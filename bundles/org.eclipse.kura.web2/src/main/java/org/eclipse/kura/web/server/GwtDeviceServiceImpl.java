@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2025 Eurotech and/or its affiliates and others
+ * Copyright (c) 2011, 2026 Eurotech and/or its affiliates and others
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -89,6 +89,8 @@ public class GwtDeviceServiceImpl extends OsgiRemoteServiceServlet implements Gw
                     formatUptime(Long.parseLong(systemAdminService.getUptime()))));
             pairs.add(new GwtGroupedNVPair(DEV_INFO, "devLastWifiChannel",
                     String.valueOf(systemService.getKuraWifiTopChannel())));
+            pairs.add(new GwtGroupedNVPair(DEV_INFO, "devInternetConnectionStatus",
+                    systemService.getInternetConnectionStatus().toString()));
 
             pairs.add(new GwtGroupedNVPair(DEV_HW, "devModelName", systemService.getModelName()));
             pairs.add(new GwtGroupedNVPair(DEV_HW, "devModelId", systemService.getModelId()));
