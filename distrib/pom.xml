@@ -18,51 +18,83 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        Inherits from kura/distrib/pom.xml to reuse arch profiles, package.version /
-        package.snapshot computation, jdeb-version, and the YOFC repository setup.
+        Self-contained addon distrib pom — no parent. Builds the kura-management-ui addon
+        .deb using the web2 bundle jar already in ~/.m2 (built by the kura monorepo
+        reactor). Run with:
+            mvn -f kura-management-ui/distrib/pom.xml clean install
     -->
-    <parent>
-        <groupId>org.eclipse.kura</groupId>
-        <artifactId>distrib</artifactId>
-        <version>6.0.0-SNAPSHOT</version>
-        <relativePath>../../kura/distrib/pom.xml</relativePath>
-    </parent>
 
+    <groupId>org.eclipse.kura</groupId>
     <artifactId>kura-management-ui-distrib</artifactId>
-    <name>kura-management-ui-distrib</name>
+    <version>3.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <name>kura-management-ui-distrib</name>
 
     <properties>
+        <jdeb-version>1.14</jdeb-version>
+
         <addon.installation.dir>/opt/eclipse/kura/plugins</addon.installation.dir>
         <console.files.installation.dir>/opt/eclipse/kura/console</console.files.installation.dir>
 
-        <!-- name of the JAR produced by org.eclipse.kura.web2 (groupId.artifactId same) -->
         <web2.jar.name>org.eclipse.kura.web2</web2.jar.name>
-        <!-- web2 has its own version distinct from the kura framework (it follows the
-             web UI's own semver). See bundles/org.eclipse.kura.web2/pom.xml. -->
         <web2.version>3.0.0-SNAPSHOT</web2.version>
 
         <!-- pure-Java GWT artifact: no native bits, deb is arch-neutral -->
         <deb.architecture>all</deb.architecture>
 
         <package.name>kura-management-ui</package.name>
-
-        <!-- the parent pom's profiles set ${release.version} / ${package.version} /
-             ${package.snapshot} / ${package.revision} for us; nothing extra needed here -->
-
-        <!-- bypass parent's distrib lifecycle (assembly / dep-bundle layers / jdeb) — we
-             provide our own jdeb step below -->
-        <dist.assembly.skip>true</dist.assembly.skip>
-        <dist.linux.bundles.skip>true</dist.linux.bundles.skip>
-        <dist.linux.family.skip>true</dist.linux.family.skip>
-        <dist.network.resources.skip>true</dist.network.resources.skip>
-        <dist.dp.skip>true</dist.dp.skip>
     </properties>
 
     <build>
         <plugins>
-            <!-- Stage the web2 JAR (built by the kura/ reactor via Tycho) into a known
-                 location so jdeb can pick it up. -->
+
+            <!-- strip "-SNAPSHOT" from project.version -> ${release.version} -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>regex-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>release.version</name>
+                            <value>${project.version}</value>
+                            <regex>-SNAPSHOT</regex>
+                            <replacement></replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- short git commit -> ${git.commit.id.abbrev} -->
+            <plugin>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
+                <executions>
+                    <execution>
+                        <id>get-the-git-infos</id>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                        <phase>initialize</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <generateGitPropertiesFile>false</generateGitPropertiesFile>
+                    <skipPoms>false</skipPoms>
+                    <includeOnlyProperties>
+                        <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
+                    </includeOnlyProperties>
+                </configuration>
+            </plugin>
+
+            <!-- Stage the web2 JAR (built by the kura monorepo reactor via Tycho) into a
+                 known location so jdeb can pick it up. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -141,4 +173,34 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Internal profile: active if -DreleaseBuild is *not* specified. -->
+        <profile>
+            <id>debugBuild</id>
+            <activation>
+                <property>
+                    <name>!releaseBuild</name>
+                </property>
+            </activation>
+            <properties>
+                <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
+                <package.snapshot>git${maven.build.timestamp}.${git.commit.id.abbrev}</package.snapshot>
+                <package.version>${release.version}~${package.snapshot}</package.version>
+                <package.revision>1</package.revision>
+            </properties>
+        </profile>
+        <profile>
+            <id>releaseBuild</id>
+            <activation>
+                <property>
+                    <name>releaseBuild</name>
+                </property>
+            </activation>
+            <properties>
+                <package.version>${release.version}</package.version>
+                <package.revision>1</package.revision>
+            </properties>
+        </profile>
+    </profiles>
 </project>
