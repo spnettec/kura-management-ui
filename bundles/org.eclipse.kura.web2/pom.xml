@@ -24,9 +24,9 @@
         <groupId>org.eclipse.kura</groupId>
         <artifactId>kura</artifactId>
         <version>6.0.0-SNAPSHOT</version>
-        <!-- Source layout mirrors upstream kura-management-ui/bundles/...; the parent reactor
-             still lives in the kura/ sibling directory. -->
-        <relativePath>../../../kura/pom.xml</relativePath>
+        <!-- Source lives in the spnettec/kura-management-ui sibling repo; the parent reactor
+             is in the kura monorepo's kura/ subdir at ../../../kura/kura/. -->
+        <relativePath>../../../kura/kura/pom.xml</relativePath>
     </parent>
 
     <artifactId>org.eclipse.kura.web2</artifactId>
@@ -34,7 +34,7 @@
     <packaging>eclipse-plugin</packaging>
 
     <properties>
-        <kura.basedir>${project.basedir}/../../../kura</kura.basedir>
+        <kura.basedir>${project.basedir}/../../../kura/kura</kura.basedir>
         <!-- Convenience property to set the GWT version -->
         <gwtVersion>2.10.0</gwtVersion>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
