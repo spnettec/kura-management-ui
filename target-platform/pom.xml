@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2025, 2026 Eurotech and/or its affiliates and others
+    Copyright (c) 2026 YOFC
+
+    This program and the accompanying materials are made
+    available under the terms of the Eclipse Public License 2.0
+    which is available at https://www.eclipse.org/legal/epl-2.0/
+
+    SPDX-License-Identifier: EPL-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Aggregator for kura-management-ui's local target-platform deps.
+        p2-repo-mgmt-ui-deps converts gwt-servlet-jakarta + gwtbootstrap3 to P2
+        bundles via reficio, then install-to-m2.sh copies them under
+        p2.osgi.bundle/* in ~/.m2 so the target-definition Maven location can
+        resolve them. These two libs are ui-exclusive — no monorepo bundle uses
+        gwt or gwtbootstrap3.
+    -->
+    <groupId>org.eclipse.kura</groupId>
+    <artifactId>kura-management-ui-target-platform</artifactId>
+    <version>3.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>kura-management-ui target platform</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <p2-maven-plugin.version>2.1.0</p2-maven-plugin.version>
+
+        <!-- Versions for kura-management-ui-exclusive deps. -->
+        <gwt-user.version>2.12.2</gwt-user.version>
+        <org.gwtbootstrap3.version>1.0.1</org.gwtbootstrap3.version>
+    </properties>
+
+    <modules>
+        <module>p2-repo-mgmt-ui-deps</module>
+    </modules>
+</project>

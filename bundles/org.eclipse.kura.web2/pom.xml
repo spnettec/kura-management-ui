@@ -22,11 +22,9 @@
 
     <parent>
         <groupId>org.eclipse.kura</groupId>
-        <artifactId>kura</artifactId>
-        <version>6.0.0-SNAPSHOT</version>
-        <!-- Source lives in the spnettec/kura-management-ui sibling repo; the parent reactor
-             is in the kura monorepo's kura/ subdir at ../../../kura/kura/. -->
-        <relativePath>../../../kura/kura/pom.xml</relativePath>
+        <artifactId>kura-management-ui.parent</artifactId>
+        <version>3.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>org.eclipse.kura.web2</artifactId>
@@ -34,12 +32,14 @@
     <packaging>eclipse-plugin</packaging>
 
     <properties>
-        <kura.basedir>${project.basedir}/../../../kura/kura</kura.basedir>
+        <kura.basedir>${project.basedir}/..</kura.basedir>
         <!-- Convenience property to set the GWT version -->
         <gwtVersion>2.10.0</gwtVersion>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <!-- web2 stays on Java 11 — GWT 2.10 compiler doesn't accept Java 17+
+             source. Override the sibling parent's release=21 just for this
+             one bundle. -->
+        <maven.compiler.release>11</maven.compiler.release>
     </properties>
     
     <dependencies>

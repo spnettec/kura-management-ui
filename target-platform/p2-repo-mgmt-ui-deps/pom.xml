@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2025, 2026 Eurotech and/or its affiliates and others
+    Copyright (c) 2026 YOFC
+
+    This program and the accompanying materials are made
+    available under the terms of the Eclipse Public License 2.0
+    which is available at https://www.eclipse.org/legal/epl-2.0/
+
+    SPDX-License-Identifier: EPL-2.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.eclipse.kura</groupId>
+        <artifactId>kura-management-ui-target-platform</artifactId>
+        <version>3.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>p2-repo-mgmt-ui-deps</artifactId>
+    <packaging>pom</packaging>
+    <name>P2 site for kura-management-ui-specific deps</name>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.reficio</groupId>
+                <artifactId>p2-maven-plugin</artifactId>
+                <version>${p2-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>generate-p2-site</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>site</goal>
+                        </goals>
+                        <configuration>
+                            <artifacts>
+                                <!--
+                                    kura-management-ui-exclusive deps. The web2 bundle has
+                                    Require-Bundle: org.gwtproject.gwt-servlet-jakarta and
+                                    org.gwtbootstrap3, which Tycho needs to find as OSGi
+                                    bundles in target. No monorepo bundle uses gwt, so
+                                    these conversions live here in the sibling.
+                                -->
+                                <artifact>
+                                    <id>org.gwtproject:gwt-servlet-jakarta:${gwt-user.version}</id>
+                                    <source>true</source>
+                                    <transitive>false</transitive>
+                                </artifact>
+                                <artifact>
+                                    <id>org.gwtbootstrap3:gwtbootstrap3:${org.gwtbootstrap3.version}</id>
+                                    <source>true</source>
+                                    <transitive>false</transitive>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>install-p2-bundles-to-local-m2</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <exec executable="${project.basedir}/../install-to-m2.sh"
+                                      dir="${project.basedir}"
+                                      failonerror="true">
+                                    <arg value="${project.build.directory}/repository/plugins" />
+                                    <arg value="p2.osgi.bundle" />
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+    </repositories>
+</project>

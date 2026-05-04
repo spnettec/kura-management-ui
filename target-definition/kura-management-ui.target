@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?pde version="3.8"?>
+<!--
+
+    Copyright (c) 2025, 2026 Eurotech and/or its affiliates and others
+    Copyright (c) 2026 YOFC
+
+    This program and the accompanying materials are made
+    available under the terms of the Eclipse Public License 2.0
+    which is available at https://www.eclipse.org/legal/epl-2.0/
+
+    SPDX-License-Identifier: EPL-2.0
+
+    Contributors:
+     Eurotech
+
+-->
+<target name="kura-management-ui-target-definition">
+    <locations>
+        <!--
+            Single Maven location, no Profile location with absolute paths. All
+            bundles are resolved from ~/.m2:
+              - kura-bom: kura framework bundles (org.eclipse.kura.api, .core, …)
+                that web2 depends on, by name.
+              - target-platform-pde-deps: P2 third-party bundles (commons-io,
+                fileupload2, eclipsesource.json, jakarta.servlet, gson, …)
+                produced by monorepo's target-platform reficio.
+              - p2.osgi.bundle:org.gwtproject.gwt-servlet-jakarta + gwtbootstrap3
+                — ui-exclusive bundles produced by THIS sibling's target-platform
+                reficio.
+
+            Setup (once per fresh ~/.m2):
+                mvn -f kura/target-platform/pom.xml install
+                mvn -f kura-management-ui/target-platform/pom.xml install
+            then any kura-management-ui reactor build resolves on any machine
+            with no hardcoded paths.
+        -->
+        <location includeDependencyDepth="direct" includeDependencyScopes="compile,test"
+            includeSource="true" missingManifest="ignore" type="Maven">
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.eclipse.kura</groupId>
+                    <artifactId>kura-bom</artifactId>
+                    <version>6.0.0-SNAPSHOT</version>
+                    <type>pom</type>
+                </dependency>
+                <dependency>
+                    <groupId>org.eclipse.kura</groupId>
+                    <artifactId>target-platform-pde-deps</artifactId>
+                    <version>6.0.0-SNAPSHOT</version>
+                    <type>pom</type>
+                </dependency>
+
+                <!-- ui-exclusive bundles (sibling reficio output). -->
+                <dependency>
+                    <groupId>p2.osgi.bundle</groupId>
+                    <artifactId>org.gwtproject.gwt-servlet-jakarta</artifactId>
+                    <version>2.12.2</version>
+                </dependency>
+                <dependency>
+                    <groupId>p2.osgi.bundle</groupId>
+                    <artifactId>org.gwtbootstrap3</artifactId>
+                    <version>1.0.1</version>
+                </dependency>
+            </dependencies>
+
+            <repositories>
+                <repository>
+                    <id>kura-releases</id>
+                    <name>Eclipse Kura Repository - Releases</name>
+                    <url>https://repo.eclipse.org/content/repositories/kura-releases/</url>
+                </repository>
+                <repository>
+                    <id>kura-snapshots</id>
+                    <name>Eclipse Kura Repository - Snapshots</name>
+                    <url>https://repo.eclipse.org/content/repositories/kura-snapshots/</url>
+                </repository>
+                <repository>
+                    <id>central</id>
+                    <url>https://repo1.maven.org/maven2/</url>
+                </repository>
+            </repositories>
+        </location>
+    </locations>
+</target>
