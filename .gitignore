@@ -1,0 +1,44 @@
+# Eclipse / PDE / m2e
+.project
+.classpath
+.settings/
+.metadata/
+.recommenders/
+.factorypath
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Maven build output
+target/
+
+# GWT
+gwt-unitCache/
+gwt-unitCache-*
+www/
+www-test/
+*.cache.*
+*.cache.html
+*.cache.js
+
+# Tycho / generated manifests
+manifests/
+
+# OS junk
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Editor swap / backup
+*~
+*.swp
+*.swo
+*.bak
+
+# License audit output
+DEPENDENCIES
