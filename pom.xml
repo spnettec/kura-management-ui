@@ -24,6 +24,87 @@
     <name>Eclipse Kura Management UI</name>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Eclipse m2e settings only — no effect on Maven CLI. Tycho 4.x mojos
+                     are unknown to the legacy Sonatype "Tycho Project Configurators"
+                     0.10.0 connector, causing IDE-only "Failed to execute mojo"
+                     markers. Tell m2e to skip them; CLI Maven still runs them. -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.eclipse.tycho</groupId>
+                                        <artifactId>tycho-packaging-plugin</artifactId>
+                                        <versionRange>[4.0.0,)</versionRange>
+                                        <goals>
+                                            <goal>build-qualifier</goal>
+                                            <goal>build-qualifier-aggregator</goal>
+                                            <goal>validate-id</goal>
+                                            <goal>validate-version</goal>
+                                            <goal>package-plugin</goal>
+                                            <goal>package-feature</goal>
+                                            <goal>package-update-site</goal>
+                                            <goal>package-iu</goal>
+                                            <goal>package-target-definition</goal>
+                                            <goal>update-consumer-pom</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.eclipse.tycho</groupId>
+                                        <artifactId>tycho-p2-plugin</artifactId>
+                                        <versionRange>[4.0.0,)</versionRange>
+                                        <goals>
+                                            <goal>p2-metadata</goal>
+                                            <goal>p2-metadata-default</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.eclipse.tycho</groupId>
+                                        <artifactId>target-platform-configuration</artifactId>
+                                        <versionRange>[4.0.0,)</versionRange>
+                                        <goals>
+                                            <goal>target-platform</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-antrun-plugin</artifactId>
+                                        <versionRange>[1.7,)</versionRange>
+                                        <goals>
+                                            <goal>run</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
