@@ -33,8 +33,6 @@
 
     <properties>
         <kura.basedir>${project.basedir}/..</kura.basedir>
-        <!-- Convenience property to set the GWT version -->
-        <gwtVersion>2.10.0</gwtVersion>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- web2 stays on Java 11 — GWT 2.10 compiler doesn't accept Java 17+
              source. Override the sibling parent's release=21 just for this
@@ -51,7 +49,12 @@
         <dependency>
             <groupId>org.gwtproject</groupId>
             <artifactId>gwt-user</artifactId>
-            <version>2.12.2</version>
+            <version>${gwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.gwtproject</groupId>
+            <artifactId>gwt-servlet-jakarta</artifactId>
+            <version>${gwt.version}</version>
         </dependency>
     </dependencies>
         
@@ -82,21 +85,14 @@
                         <configuration>
                             <outputDirectory>${project.basedir}/lib</outputDirectory>
                             <stripVersion>true</stripVersion>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.gwtbootstrap3</groupId>
-                                    <artifactId>gwtbootstrap3</artifactId>
-                                    <version>1.0.1</version>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.gwtproject</groupId>
-                                    <artifactId>gwt-user</artifactId>
-                                    <version>2.12.2</version>
-                                </artifactItem>
-                            </artifactItems>
+                            <includeArtifactIds>
+                                gwtbootstrap3,
+                                gwt-user,
+                                gwt-servlet-jakarta
+                            </includeArtifactIds>
                         </configuration>
                         <goals>
-                            <goal>copy</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -118,7 +114,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>gwt-maven-plugin</artifactId>
-                <version>${gwtVersion}</version>
+                <version>2.10.0</version>
 				<executions>
 					<execution>
 						<goals>
