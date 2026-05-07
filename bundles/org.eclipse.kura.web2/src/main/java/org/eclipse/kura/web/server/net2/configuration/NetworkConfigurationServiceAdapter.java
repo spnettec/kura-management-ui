@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.kura.web.server.net2.configuration;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,11 @@ public class NetworkConfigurationServiceAdapter {
         this.configurationService = ServiceLocator.getInstance().getService(ConfigurationService.class);
         ComponentConfiguration config = configurationService
                 .getComponentConfiguration(NETWORK_CONFIGURATION_SERVICE_PID);
-        this.netConfServProperties = config.getConfigurationProperties();
+        if (config != null) {
+            this.netConfServProperties = config.getConfigurationProperties();
+        } else {
+            this.netConfServProperties = Collections.emptyMap();
+        }
     }
 
     /**
@@ -117,8 +122,11 @@ public class NetworkConfigurationServiceAdapter {
      */
     public List<String> getConfiguredNetworkInterfaceNames() {
         List<String> ifnames = new LinkedList<>();
-
         String netInterfaces = (String) this.netConfServProperties.get(NET_INTERFACES);
+        if (netInterfaces == null || netInterfaces.isEmpty()) {
+            return ifnames;
+        }
+
         String[] interfaces = netInterfaces.split(",");
 
         for (String name : interfaces) {
