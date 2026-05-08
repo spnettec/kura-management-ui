@@ -66,6 +66,12 @@ public class GwtPackageServiceImpl extends OsgiRemoteServiceServlet implements G
     }
 
     @Override
+    public Boolean isDeploymentAgentAvailable(GwtXSRFToken xsrfToken) throws GwtKuraException {
+        checkXSRFToken(xsrfToken);
+        return ServiceLocator.getInstance().getService(DeploymentAgentService.class) != null;
+    }
+
+    @Override
     public List<GwtDeploymentPackage> findDeviceDeploymentPackages(GwtXSRFToken xsrfToken) throws GwtKuraException {
         checkXSRFToken(xsrfToken);
         DeploymentAdmin deploymentAdmin = ServiceLocator.getInstance().getService(DeploymentAdmin.class);
@@ -111,6 +117,9 @@ public class GwtPackageServiceImpl extends OsgiRemoteServiceServlet implements G
 
         DeploymentAgentService deploymentAgentService = ServiceLocator.getInstance()
                 .getService(DeploymentAgentService.class);
+        if (deploymentAgentService == null) {
+            throw new GwtKuraException(GwtKuraErrorCode.SERVICE_NOT_ENABLED);
+        }
         try {
             deploymentAgentService.uninstallDeploymentPackageAsync(GwtSafeHtmlUtils.htmlEscape(packageName));
         } catch (Exception e) {
@@ -132,6 +141,9 @@ public class GwtPackageServiceImpl extends OsgiRemoteServiceServlet implements G
             String url = String.format(MARKETPLACE_URL, nodeId);
             DeploymentAgentService deploymentAgentService = ServiceLocator.getInstance()
                     .getService(DeploymentAgentService.class);
+            if (deploymentAgentService == null) {
+                throw new GwtKuraException(GwtKuraErrorCode.SERVICE_NOT_ENABLED);
+            }
             MarketplacePackageDescriptor marketplacePackageDescriptor = deploymentAgentService
                     .getMarketplacePackageDescriptor(url, sslManagerService);
 
@@ -142,6 +154,8 @@ public class GwtPackageServiceImpl extends OsgiRemoteServiceServlet implements G
             descriptor.setCurrentKuraVersion(marketplacePackageDescriptor.getCurrentKuraVersion());
             descriptor.setNodeId(marketplacePackageDescriptor.getNodeId());
             descriptor.setUrl(marketplacePackageDescriptor.getUrl());
+        } catch (GwtKuraException e) {
+            throw e;
         } catch (Exception e) {
             logger.warn("failed to get deployment package descriptor from Eclipse Marketplace", e);
             throw new GwtKuraException(GwtKuraErrorCode.INTERNAL_ERROR);

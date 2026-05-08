@@ -60,6 +60,8 @@ import org.eclipse.kura.web.shared.model.GwtUserData;
 import org.eclipse.kura.web.shared.model.GwtXSRFToken;
 import org.eclipse.kura.web.shared.service.GwtComponentService;
 import org.eclipse.kura.web.shared.service.GwtComponentServiceAsync;
+import org.eclipse.kura.web.shared.service.GwtPackageService;
+import org.eclipse.kura.web.shared.service.GwtPackageServiceAsync;
 import org.eclipse.kura.web.shared.service.GwtSecurityTokenService;
 import org.eclipse.kura.web.shared.service.GwtSecurityTokenServiceAsync;
 import org.eclipse.kura.web.shared.service.GwtSessionService;
@@ -257,6 +259,7 @@ public class EntryClassUi extends Composite implements ServicesUi.Listener {
     private static final GwtComponentServiceAsync gwtComponentService = GWT.create(GwtComponentService.class);
     private static final GwtSecurityTokenServiceAsync gwtXSRFService = GWT.create(GwtSecurityTokenService.class);
     private static final GwtSessionServiceAsync gwtSessionService = GWT.create(GwtSessionService.class);
+    private static final GwtPackageServiceAsync gwtPackageService = GWT.create(GwtPackageService.class);
 
     private final KeyUpHandler searchBoxChangeHandler = event -> {
         TextBox searchBox = (TextBox) event.getSource();
@@ -574,6 +577,24 @@ public class EntryClassUi extends Composite implements ServicesUi.Listener {
             this.packages.setVisible(false);
             return;
         }
+
+        // Hide until the deployment-agent backend is confirmed registered.
+        this.packages.setVisible(false);
+        RequestQueue.submit(c -> gwtXSRFService.generateSecurityToken(
+                c.callback(token -> gwtPackageService.isDeploymentAgentAvailable(token, new AsyncCallback<Boolean>() {
+
+                    @Override
+                    public void onFailure(Throwable caught) {
+                        // leave hidden
+                    }
+
+                    @Override
+                    public void onSuccess(Boolean available) {
+                        if (Boolean.TRUE.equals(available)) {
+                            EntryClassUi.this.packages.setVisible(true);
+                        }
+                    }
+                }))), false);
 
         this.packages.addClickHandler(event -> {
             if (this.selectedAnchorListItem == this.packages) {

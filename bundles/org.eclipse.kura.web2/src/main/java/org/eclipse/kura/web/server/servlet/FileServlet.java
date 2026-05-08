@@ -615,6 +615,10 @@ public class FileServlet extends AuditServlet {
             logger.error("Error locating DeploymentAgentService");
             throw new ServletException("Error locating DeploymentAgentService", e);
         }
+        if (deploymentAgentService == null) {
+            logger.error("DeploymentAgentService is not registered; install the kura-deployment addon");
+            throw new ServletException("DeploymentAgentService is not available");
+        }
 
         // Check that we have a file upload request
         boolean isMultipart = JakartaServletFileUpload.isMultipartContent(req);
@@ -751,6 +755,10 @@ public class FileServlet extends AuditServlet {
         } catch (GwtKuraException e) {
             logger.error("Error locating DeploymentAgentService");
             throw new ServletException("Error locating DeploymentAgentService", e);
+        }
+        if (deploymentAgentService == null) {
+            logger.error("DeploymentAgentService is not registered; install the kura-deployment addon");
+            throw new ServletException("DeploymentAgentService is not available");
         }
 
         HttpSession session = req.getSession(false);
