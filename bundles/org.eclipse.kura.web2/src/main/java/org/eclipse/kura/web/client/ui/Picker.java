@@ -220,7 +220,6 @@ public class Picker extends Composite implements HasId {
 
             Picker.this.inputPanel.add(input);
 
-            input.validate();
             input.reset();
         }
 
