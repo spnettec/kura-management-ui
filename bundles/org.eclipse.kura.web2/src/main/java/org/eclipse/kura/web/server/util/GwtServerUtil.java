@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2025 Eurotech and/or its affiliates and others
+ * Copyright (c) 2016, 2026 Eurotech and/or its affiliates and others
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -42,6 +42,7 @@ import org.eclipse.kura.core.configuration.ComponentConfigurationImpl;
 import org.eclipse.kura.core.configuration.XmlComponentConfigurations;
 import org.eclipse.kura.core.configuration.metatype.Tad;
 import org.eclipse.kura.core.configuration.metatype.Tocd;
+import org.eclipse.kura.core.configuration.util.StringUtil;
 import org.eclipse.kura.driver.descriptor.DriverDescriptor;
 import org.eclipse.kura.driver.descriptor.DriverDescriptorService;
 import org.eclipse.kura.identity.LoginBannerService;
@@ -259,32 +260,66 @@ public final class GwtServerUtil {
     }
 
     public static Object getUserDefinedObject(GwtConfigParameter param, Object currentObjValue) {
-        Object objValue;
 
         final int cardinality = param.getCardinality();
         if (cardinality == 0 || cardinality == 1 || cardinality == -1) {
-            String strValue = param.getValue();
-
-            if (currentObjValue instanceof Password && PASSWORD_PLACEHOLDER.equals(strValue)) {
-                objValue = currentObjValue;
-            } else {
-                objValue = getObjectValue(param);
-            }
+            return getUserDefinedObjectScalar(param, currentObjValue);
         } else {
-            String[] strValues = param.getValues();
+            return getUserDefinedObjectArray(param, currentObjValue);
+        }
+    }
+
+    private static Object getUserDefinedObjectScalar(GwtConfigParameter param, Object currentObjValue) {
+        String strValue = param.getValue();
+
+        if (param.getType() == GwtConfigParameterType.PASSWORD && PASSWORD_PLACEHOLDER.equals(strValue)) {
+
+            if (currentObjValue instanceof Password) {
+                return currentObjValue;
+            }
+
+            if (param.isRequired()) {
+                final String defaultValue = param.getDefault();
+
+                if (defaultValue != null && !defaultValue.trim().isEmpty()) {
+                    final GwtConfigParameter cloned = new GwtConfigParameter(param);
+                    cloned.setValue(defaultValue);
+                    return getObjectValue(cloned);
+                }
+            }
+        }
+
+        return getObjectValue(param);
+    }
+
+    private static Object getUserDefinedObjectArray(GwtConfigParameter param, Object currentObjValue) {
+        String[] strValues = param.getValues();
+
+        if (param.getType() == GwtConfigParameterType.PASSWORD) {
+
+            Optional<String[]> current = Optional.empty();
 
             if (currentObjValue instanceof Password[]) {
-                Password[] currentPasswordValue = (Password[]) currentObjValue;
-                for (int i = 0; i < strValues.length; i++) {
-                    if (PASSWORD_PLACEHOLDER.equals(strValues[i])) {
-                        strValues[i] = new String(currentPasswordValue[i].getPassword());
-                    }
+                current = Optional.of(Arrays.stream((Password[]) currentObjValue).map(p -> new String(p.getPassword()))
+                        .collect(Collectors.toList()).toArray(new String[] {}));
+            } else if (param.isRequired()) {
+                final String defaultValue = param.getDefault();
+
+                if (defaultValue != null && !defaultValue.trim().isEmpty()) {
+                    current = Optional.of(StringUtil.splitValues(defaultValue));
                 }
             }
 
-            objValue = getObjectValues(param, strValues);
+            if (current.isPresent()) {
+                for (int i = 0; i < strValues.length; i++) {
+                    if (PASSWORD_PLACEHOLDER.equals(strValues[i]) && i < current.get().length) {
+                        strValues[i] = current.get()[i];
+                    }
+                }
+            }
         }
-        return objValue;
+
+        return getObjectValues(param, strValues);
     }
 
     /**
