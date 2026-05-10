@@ -33,7 +33,7 @@
     <properties>
         <jdeb-version>1.14</jdeb-version>
 
-        <addon.installation.dir>/opt/eclipse/kura/plugins</addon.installation.dir>
+        <addon.installation.dir>/opt/eclipse/kura/siblings/management-ui</addon.installation.dir>
         <console.files.installation.dir>/opt/eclipse/kura/console</console.files.installation.dir>
 
         <web2.jar.name>org.eclipse.kura.web2</web2.jar.name>
@@ -135,7 +135,7 @@
                         </goals>
                         <configuration>
                             <verbose>true</verbose>
-                            <deb>${basedir}/target/${package.name}_${package.version}-${package.revision}_${deb.architecture}.deb</deb>
+                            <deb>${basedir}/target/deb/${package.name}_${package.version}-${package.revision}_${deb.architecture}.deb</deb>
                             <snapshotExpand>true</snapshotExpand>
                             <snapshotTemplate>${package.snapshot}</snapshotTemplate>
                             <controlDir>${project.basedir}/deb/control</controlDir>

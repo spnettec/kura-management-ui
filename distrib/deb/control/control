@@ -12,7 +12,7 @@ Package: [[package.name]]
 Version: [[version]]-[[package.revision]]
 Section: admin
 Priority: optional
-Depends: kura-core (>= 6.0.0~)
+Depends: kura-core (>= 6.0.0~), kura-core (<< 7.0.0~)
 Architecture: [[deb.architecture]]
 Maintainer: YOFC IoT Edge Team <iot@yofc.com>
 Description: YOFC SMART IOT EDGE GATEWAY - Management UI add-on
