@@ -44,6 +44,9 @@ import org.gwtbootstrap3.client.ui.InlineHelpBlock;
 import org.gwtbootstrap3.client.ui.InlineRadio;
 import org.gwtbootstrap3.client.ui.Input;
 import org.gwtbootstrap3.client.ui.ListBox;
+import com.google.gwt.user.client.ui.Panel;
+import org.gwtbootstrap3.client.ui.TextArea;
+import org.gwtbootstrap3.client.ui.TextBox;
 import org.gwtbootstrap3.client.ui.base.TextBoxBase;
 import org.gwtbootstrap3.client.ui.constants.IconType;
 import org.gwtbootstrap3.client.ui.constants.Toggle;
@@ -417,12 +420,11 @@ public abstract class AbstractServicesUi extends Composite {
         } else {
             input.setInputPasswordText("");
         }
-        
+
         input.setShowPasswordButtonEnabled(!PLACEHOLDER.equals(input.getInputPasswordText()));
-        
+
         input.setInputPasswordClickHandler(handler -> {
-            if (input.isInputPasswordEnabled()
-                    && input.getInputPasswordText().equals(PLACEHOLDER)) {
+            if (input.isInputPasswordEnabled() && input.getInputPasswordText().equals(PLACEHOLDER)) {
                 input.setInputPasswordText("");
                 input.validateInputPassword();
                 input.setShowPasswordButtonEnabled(true);
@@ -440,7 +442,8 @@ public abstract class AbstractServicesUi extends Composite {
             public List<EditorError> validate(Editor editor, Object value) {
 
                 List<EditorError> result = new ArrayList<>();
-                if ((input.getInputPasswordText() == null || "".equals(input.getInputPasswordText().trim())) && param.isRequired()) {
+                if ((input.getInputPasswordText() == null || "".equals(input.getInputPasswordText().trim()))
+                        && param.isRequired()) {
                     // null in required field
                     result.add(new BasicEditorError(input, input.getInputPasswordText(), MSGS.formRequiredParameter()));
                     AbstractServicesUi.this.valid.put(param.getId(), false);
@@ -612,36 +615,43 @@ public abstract class AbstractServicesUi extends Composite {
     }
 
     protected void fillUpdatedConfiguration(FormGroup fg) {
-        GwtConfigParameter param = new GwtConfigParameter();
         List<String> multiFieldValues = new ArrayList<>();
-        int fgwCount = fg.getWidgetCount();
-        for (int i = 0; i < fgwCount; i++) {
-            logger.fine("Widget: " + fg.getClass());
 
-            if (fg.getWidget(i) instanceof FormLabel) {
-                param = this.configurableComponent.getParameter(fg.getWidget(i).getTitle());
+        final GwtConfigParameter param = fillUpdatedConfigurationInternal(fg, null, multiFieldValues);
 
-            } else if (fg.getWidget(i) instanceof ListBox || fg.getWidget(i) instanceof Input
-                    || fg.getWidget(i) instanceof TextBoxBase) {
+        if (!multiFieldValues.isEmpty() && param != null) {
+            param.setValues(multiFieldValues.toArray(new String[] {}));
+        }
+    }
 
-                if (param == null) {
+    private GwtConfigParameter fillUpdatedConfigurationInternal(final Panel fg, GwtConfigParameter target,
+            List<String> multiFieldValues) {
+        for (final Widget w : fg) {
+            logger.fine("Widget: " + w.getClass());
+
+            if (w instanceof FormLabel) {
+                target = this.configurableComponent.getParameter(w.getTitle());
+            } else if (w instanceof Panel) {
+                target = fillUpdatedConfigurationInternal((Panel) w, target, multiFieldValues);
+            } else if (w instanceof ListBox || w instanceof Input || w instanceof TextBoxBase) {
+
+                if (target == null) {
                     errorLogger.warning("Missing parameter");
                     continue;
                 }
-                String value = getUpdatedFieldConfiguration(param, fg.getWidget(i));
+                String value = getUpdatedFieldConfiguration(target, w);
                 if (value == null) {
                     continue;
                 }
-                if (param.getCardinality() == 0 || param.getCardinality() == 1 || param.getCardinality() == -1) {
-                    param.setValue(value);
+                if (target.getCardinality() == 0 || target.getCardinality() == 1 || target.getCardinality() == -1) {
+                    target.setValue(value);
                 } else {
                     multiFieldValues.add(value);
                 }
             }
         }
-        if (!multiFieldValues.isEmpty() && param != null) {
-            param.setValues(multiFieldValues.toArray(new String[] {}));
-        }
+
+        return target;
     }
 
     protected void restoreConfiguration(GwtConfigComponent originalConfig) {
