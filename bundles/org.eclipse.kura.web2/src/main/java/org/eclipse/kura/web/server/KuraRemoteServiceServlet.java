@@ -217,8 +217,12 @@ public class KuraRemoteServiceServlet extends RemoteServiceServlet {
                 String name = item.getFieldName();
 
                 if (name.equals(fieldName)) {
-                    fieldValue = item.getString();
-                    logger.debug("Found field name '{}' with value: {}", name, fieldValue);
+                    try {
+                        fieldValue = item.getString();
+                        logger.debug("Found field name '{}' with value: {}", name, fieldValue);
+                    } catch (IOException e) {
+                        throw new org.apache.commons.fileupload2.core.FileUploadException(e.getMessage(), e);
+                    }
                 }
             }
         }
