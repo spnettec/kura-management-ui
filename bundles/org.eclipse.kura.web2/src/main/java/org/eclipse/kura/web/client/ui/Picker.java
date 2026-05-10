@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2024 Eurotech and/or its affiliates and others
+ * Copyright (c) 2020, 2026 Eurotech and/or its affiliates and others
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -122,7 +122,8 @@ public class Picker extends Composite implements HasId {
 
         private Optional<String> message = Optional.empty();
         private Optional<Runnable> onCancel = Optional.empty();
-        private Optional<Consumer<Input>> customizer = Optional.empty();
+        private Optional<Consumer<Input>> simpleInputCustomizer = Optional.empty();
+        private Optional<Consumer<NewPasswordInputForm>> newPasswordInputCustomizer = Optional.empty();
 
         public Builder(final Function<String, U> provider) {
             this.provider = provider;
@@ -154,20 +155,34 @@ public class Picker extends Composite implements HasId {
         }
 
         public Builder<U> setInputCustomizer(final Consumer<Input> customizer) {
-            this.customizer = Optional.of(customizer);
+            this.simpleInputCustomizer = Optional.of(customizer);
+            return this;
+        }
+
+        public Builder<U> setPasswordInputCustomizer(final Consumer<NewPasswordInputForm> customizer) {
+            this.newPasswordInputCustomizer = Optional.of(customizer);
             return this;
         }
 
         private Input initInput() {
             final Input result = new Input();
             result.addKeyUpHandler(e -> result.validate());
-            if (this.customizer.isPresent()) {
-                this.customizer.get().accept(result);
+            if (this.simpleInputCustomizer.isPresent()) {
+                this.simpleInputCustomizer.get().accept(result);
             }
             return result;
         }
 
-        public void pick() {
+        private NewPasswordInputForm initNewPasswordInput() {
+            final NewPasswordInputForm result = new NewPasswordInputForm();
+            result.setInputPasswordKeyUpHandler(e -> result.validateInputPassword());
+            if (this.newPasswordInputCustomizer.isPresent()) {
+                this.newPasswordInputCustomizer.get().accept(result);
+            }
+            return result;
+        }
+
+        public void pick(Class<?> inputType) {
             requireNonNull(this.provider, "provider cannot be null");
             requireNonNull(this.validators, "validators cannot be null");
             requireNonNull(this.consumer, "onPick cannot be null");
@@ -181,6 +196,19 @@ public class Picker extends Composite implements HasId {
                 Picker.this.label.setText("");
             }
 
+            if (inputType == NewPasswordInputForm.class) {
+                pickNewPasswordInput();
+            } else if (inputType == Input.class) {
+                pickInput();
+            } else {
+                throw new IllegalArgumentException("Supported input types are Input and NewPasswordInputForm, but was "
+                        + inputType.getName());
+            }
+
+            Picker.this.modal.show();
+        }
+
+        private void pickInput() {
             final Input input = initInput();
 
             final State<U> localState = new State<>(input, this.provider, this.validators, this.consumer,
@@ -194,13 +222,28 @@ public class Picker extends Composite implements HasId {
 
             input.validate();
             input.reset();
-            Picker.this.modal.show();
+        }
+
+        private void pickNewPasswordInput() {
+            final NewPasswordInputForm inputForm = initNewPasswordInput();
+
+            final State<U> localState = new State<>(inputForm, this.provider, this.validators, this.consumer,
+                    this.onCancel.orElse(() -> {
+                    }));
+
+            Picker.this.state = Optional.of(localState);
+            Picker.this.dismissAction = Optional.of(State::onCancel);
+
+            Picker.this.inputPanel.add(inputForm);
+
+            inputForm.resetPasswordInput();
         }
     }
 
     private class State<U> implements Validator<String> {
 
         private final Input value;
+        private final NewPasswordInputForm newPasswordValue;
         private final Function<String, U> provider;
         private final List<Validator<String>> validators;
         private final Consumer<U> consumer;
@@ -215,6 +258,7 @@ public class Picker extends Composite implements HasId {
                 Consumer<U> consumer,
                 final Runnable onCancel) {
             this.value = value;
+            this.newPasswordValue = null;
             this.provider = provider;
             this.validators = validators;
             this.consumer = consumer;
@@ -228,6 +272,26 @@ public class Picker extends Composite implements HasId {
                 }
             });
             this.shownHandler = Picker.this.modal.addShownHandler(e -> value.setFocus(true));
+        }
+
+        public State(NewPasswordInputForm value, Function<String, U> provider, List<Validator<String>> validators,
+                Consumer<U> consumer,
+                final Runnable onCancel) {
+            this.value = null;
+            this.newPasswordValue = value;
+            this.provider = provider;
+            this.validators = validators;
+            this.consumer = consumer;
+            this.onDismiss = onCancel;
+            this.newPasswordValue.setInputPasswordValidators(this);
+            this.submitHandler = Picker.this.form.addSubmitHandler(e -> {
+                e.cancel();
+                if (value.validateInputPassword()) {
+                    Picker.this.dismissAction = Optional.of(State::onAccept);
+                    Picker.this.modal.hide();
+                }
+            });
+            this.shownHandler = Picker.this.modal.addShownHandler(e -> newPasswordValue.setInputPasswordFocus(true));
         }
 
         public void onAccept() {

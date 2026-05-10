@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2024 Eurotech and/or its affiliates and others
+ * Copyright (c) 2020, 2026 Eurotech and/or its affiliates and others
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -33,6 +33,7 @@ import org.eclipse.kura.web.shared.service.GwtSecurityTokenServiceAsync;
 import org.eclipse.kura.web.shared.service.GwtUserService;
 import org.eclipse.kura.web.shared.service.GwtUserServiceAsync;
 import org.gwtbootstrap3.client.ui.Button;
+import org.gwtbootstrap3.client.ui.Input;
 import org.gwtbootstrap3.client.ui.PanelFooter;
 import org.gwtbootstrap3.client.ui.Row;
 import org.gwtbootstrap3.client.ui.html.Paragraph;
@@ -177,7 +178,7 @@ public class UsersPanelUi extends Composite implements Tab, UserConfigUi.Listene
                                     this.dataProvider.getList().add(userConfig);
                                     setDirty(true);
                                 }))))))
-                .pick());
+                .pick(Input.class));
 
         this.delete.addClickHandler(e -> this.alertDialog.show(MSGS.usersConfirmDeleteIdentity(), () -> {
             this.dataProvider.getList().remove(this.selectionModel.getSelectedObject());

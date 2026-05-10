@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2025 Eurotech and/or its affiliates and others
+ * Copyright (c) 2020, 2026 Eurotech and/or its affiliates and others
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -22,6 +22,7 @@ import org.eclipse.kura.web.client.configuration.HasConfiguration;
 import org.eclipse.kura.web.client.messages.Messages;
 import org.eclipse.kura.web.client.ui.ConfigurableComponentUi;
 import org.eclipse.kura.web.client.ui.EntryClassUi;
+import org.eclipse.kura.web.client.ui.NewPasswordInputForm;
 import org.eclipse.kura.web.client.ui.Picker;
 import org.eclipse.kura.web.client.ui.drivers.assets.BooleanInputCell;
 import org.eclipse.kura.web.client.ui.validator.GwtValidators;
@@ -274,21 +275,21 @@ public class UserConfigUi extends Composite {
             this.picker.builder() //
                     .setTitle(MSGS.usersSetPassword()) //
                     .setMessage(MSGS.usersDefineNewPassword()) //
-                    .setInputCustomizer(input -> input.setType(InputType.PASSWORD)) //
+                    .setPasswordInputCustomizer(input -> input.setInputPasswordType(InputType.PASSWORD)) //
                     .setOnCancel(onDismiss) //
                     .setValidators(GwtValidators.newPassword(passwordStrengthRequirements)) //
                     .setOnPick(newPassword -> this.picker.builder() //
                             .setTitle(MSGS.usersConfirmPassword()) //
                             .setMessage(MSGS.usersRepeatPassword()) //
-                            .setInputCustomizer(input -> input.setType(InputType.PASSWORD)) //
+                            .setPasswordInputCustomizer(input -> input.setInputPasswordType(InputType.PASSWORD)) //
                             .setOnCancel(onDismiss) //
                             .setValidators(Collections.singletonList(GwtValidators
-                                    .predicate(confirm -> newPassword.equals(confirm), MSGS.usersPasswordMismatch()))) //
+                                    .predicate(newPassword::equals, MSGS.usersPasswordMismatch()))) //
                             .setOnPick(p -> {
                                 this.userData.setNewPassword(Optional.of(p));
                                 this.listener.onUserDataChanged(this.userData);
-                            }).pick())
-                    .pick();
+                            }).pick(NewPasswordInputForm.class)) //
+                    .pick(NewPasswordInputForm.class);
         });
 
     }
