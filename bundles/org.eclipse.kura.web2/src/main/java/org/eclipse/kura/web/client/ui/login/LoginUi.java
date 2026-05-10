@@ -16,6 +16,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -206,8 +207,8 @@ public class LoginUi extends Composite {
             @Override
             public void onSuccess(final GwtLoginInfo result) {
                 initLoginBannerModal(result);
-                loginDialog.show();
                 initAuthenticationHandlers(result);
+                loginDialog.show();
             }
         });
 
@@ -417,8 +418,8 @@ public class LoginUi extends Composite {
 
         private void getGwtConsoleUserOptions(final Consumer<GwtPasswordStrenghtRequirements> onSuccess,
                 final Consumer<Throwable> onFailure) {
-            gwtXsrfService.generateSecurityToken(asyncCallback(token -> gwtSessionService
-                    .getPasswordStrenghtRequirements(token, asyncCallback(onSuccess, onFailure)), onFailure));
+            gwtXsrfService.generateSecurityToken(asyncCallback(
+                    token -> gwtSessionService.getPasswordStrenghtRequirements(token, asyncCallback(onSuccess, onFailure)), onFailure));
         }
 
         private void setNewPassword(final String oldPassword, final String newPassword, final Consumer<Void> onSuccess,
@@ -430,7 +431,7 @@ public class LoginUi extends Composite {
 
         private void changePassword(final Consumer<Void> onSuccess, final Consumer<Throwable> onFailure) {
 
-            getGwtConsoleUserOptions(options -> this.passwordChangeModal.pickPassword(options,
+            getGwtConsoleUserOptions(options -> this.passwordChangeModal.pickPassword(Optional.of(this.usernameInput.getValue()), options,
                     (oldPass, newPass) -> setNewPassword(oldPass, newPass, onSuccess, onFailure)), onFailure);
         }
 

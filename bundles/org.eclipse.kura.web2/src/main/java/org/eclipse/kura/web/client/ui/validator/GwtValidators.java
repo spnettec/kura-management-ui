@@ -13,8 +13,8 @@
 package org.eclipse.kura.web.client.ui.validator;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,15 +48,20 @@ public class GwtValidators {
     private GwtValidators() {
     }
 
-    public static List<Validator<String>> newPassword(final GwtPasswordStrenghtRequirements userOptions) {
+    public static List<Validator<String>> newPassword(final Optional<String> identityName,
+            final GwtPasswordStrenghtRequirements userOptions) {
 
-        final List<Validator<String>> defaultValidators = Arrays.asList(
-                stringLength(255, MSGS.pwdMaxLength()),
-                noWhitespaceCharacters(MSGS.pwdWhitespaceCharacters()),
-                nonEmpty(MSGS.pwdEmpty()));
+        final List<Validator<String>> defaultValidators = new ArrayList<>();
+        
+        defaultValidators.add(nonEmpty(MSGS.pwdEmpty()));
+        defaultValidators.add(stringLength(255, MSGS.pwdMaxLength()));
+        defaultValidators.add(noWhitespaceCharacters(MSGS.pwdWhitespaceCharacters()));
 
-        return Stream
-                .concat(PasswordStrengthValidators.fromConfig(userOptions, new PasswordStrengthValidators.Messages() {
+        identityName.ifPresent(
+                id -> defaultValidators.add(notEqualsIdentityName(id, MSGS.pwdStrengthNotEqualsIdentityName())));
+
+        return Stream.concat(PasswordStrengthValidators
+                .fromConfig(identityName, userOptions, new PasswordStrengthValidators.Messages() {
 
                     @Override
                     public String pwdStrengthDigitsRequired() {
@@ -78,6 +83,11 @@ public class GwtValidators {
                         return MSGS.pwdStrengthMinLength(Integer.toString(value));
                     }
 
+                    @Override
+                    public String pwdNotEqualsUsername() {
+                        return MSGS.pwdStrengthNotEqualsIdentityName();
+                    }
+
                 }).stream().map(v -> new ValidatorWrapper<>(v, Priority.MEDIUM)), defaultValidators.stream())
                 .collect(Collectors.toList());
     }
@@ -85,6 +95,16 @@ public class GwtValidators {
     public static Validator<String> nonEmpty(final String message) {
         return new ValidatorWrapper<String>(new NotEmptyValidator(message), Priority.HIGHEST) {
         };
+    }
+
+    public static Validator<String> notEqualsIdentityName(final String identityName, final String message) {
+        return new ValidatorWrapper<>(new PredicateValidator(v -> {
+            if (v == null) {
+                return true;
+            }
+
+            return !v.equalsIgnoreCase(identityName);
+        }, message), Priority.MEDIUM);
     }
 
     public static <T> Validator<T> notInList(final List<T> values, final String message) {
@@ -138,7 +158,8 @@ public class GwtValidators {
     }
 
     public static Validator<String> punctuatedAlphanumericSequence(final char[] delimiters, final String message) {
-        return new ValidatorWrapper<String>(new PunctuatedAlphanumericSequenceValidator(delimiters, message), Priority.MEDIUM) {
+        return new ValidatorWrapper<String>(new PunctuatedAlphanumericSequenceValidator(delimiters, message),
+                Priority.MEDIUM) {
         };
     }
 

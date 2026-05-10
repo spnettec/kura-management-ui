@@ -78,7 +78,7 @@ public class PasswordChangeModal extends Composite {
 
             @Override
             public List<EditorError> validate(Editor<String> editor, String value) {
-                if (value == null || value.length() <= 0) {
+                if (value == null || value.trim().isEmpty()) {
                     return Collections
                             .singletonList(new BasicEditorError(editor, value, MSGS.loginEnterCurrentPassword()));
                 }
@@ -131,7 +131,7 @@ public class PasswordChangeModal extends Composite {
     }
 
     @SuppressWarnings("unchecked")
-    private void setUserOptions(final GwtPasswordStrenghtRequirements options) {
+    private void setUserOptions(final Optional<String> identityName,  final GwtPasswordStrenghtRequirements options) {
         this.newPassword.setValidators(new Validator<String>() {
 
             @Override
@@ -143,7 +143,7 @@ public class PasswordChangeModal extends Composite {
             public List<EditorError> validate(final Editor<String> editor, final String value) {
                 final List<EditorError> result = new ArrayList<>();
 
-                for (final Validator<String> validator : GwtValidators.newPassword(options)) {
+                for (final Validator<String> validator : GwtValidators.newPassword(identityName, options)) {
                     result.addAll(validator.validate(editor, value));
                 }
 
@@ -153,11 +153,11 @@ public class PasswordChangeModal extends Composite {
         });
     }
 
-    public void pickPassword(final GwtPasswordStrenghtRequirements options, final Callback callback) {
+    public void pickPassword(Optional<String> identityName, final GwtPasswordStrenghtRequirements options, final Callback callback) {
         this.oldPassword.setValue("");
         this.newPassword.setValue("");
         this.confirmNewPassword.setValue("");
-        setUserOptions(options);
+        setUserOptions(identityName, options);
         this.callback = Optional.of(callback);
 
         this.passwordChangeModal.show();

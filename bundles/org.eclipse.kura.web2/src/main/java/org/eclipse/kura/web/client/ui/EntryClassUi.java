@@ -879,7 +879,7 @@ public class EntryClassUi extends Composite implements ServicesUi.Listener {
         loadPasswordStrengthRequirements(passwordStrengthRequirements -> {
             final PasswordChangeModal passwordChangeModal = new PasswordChangeModal();
 
-            passwordChangeModal.pickPassword(passwordStrengthRequirements, this::setNewPassword);
+            passwordChangeModal.pickPassword(Optional.empty(), passwordStrengthRequirements, this::setNewPassword);
         });
     }
 

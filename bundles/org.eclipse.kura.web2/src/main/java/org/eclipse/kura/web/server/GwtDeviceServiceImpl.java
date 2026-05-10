@@ -22,7 +22,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.kura.KuraErrorCode;
 import org.eclipse.kura.KuraException;
 import org.eclipse.kura.KuraProcessExecutionErrorException;
 import org.eclipse.kura.container.orchestration.ContainerInstanceDescriptor;
@@ -141,7 +140,7 @@ public class GwtDeviceServiceImpl extends OsgiRemoteServiceServlet implements Gw
         }
         // enumerate all other threads
         final ThreadGroup[] groups = new ThreadGroup[2 * rootGroup.activeGroupCount()];
-        rootGroup.enumerate(groups, false);
+        rootGroup.enumerate(groups);
         Arrays.sort(groups, ThreadGroupComparator.getInstance());
         for (ThreadGroup group : groups) {
 
@@ -489,9 +488,9 @@ public class GwtDeviceServiceImpl extends OsgiRemoteServiceServlet implements Gw
      * </ol>
      *
      * @param bundle
-     *            the bundle which name to retrieve
+     *                   the bundle which name to retrieve
      * @param locale
-     *            the locale, in which the bundle name is requested
+     *                   the locale, in which the bundle name is requested
      * @return the bundle name - see the description of the method for more
      *         details.
      */
@@ -514,9 +513,9 @@ public class GwtDeviceServiceImpl extends OsgiRemoteServiceServlet implements Gw
      * available.
      *
      * @param bundle
-     *            the bundle which header to retrieve
+     *                       the bundle which header to retrieve
      * @param headerName
-     *            the name of the header to retrieve
+     *                       the name of the header to retrieve
      * @return the header or empty string if it is not set
      */
     private static String getHeaderValue(Bundle bundle, String headerName) {

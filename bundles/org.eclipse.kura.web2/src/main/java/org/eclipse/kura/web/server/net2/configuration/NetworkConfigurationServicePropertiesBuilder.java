@@ -30,6 +30,7 @@ import org.eclipse.kura.web.shared.model.GwtNetInterfaceConfig;
 import org.eclipse.kura.web.shared.model.GwtNetRouterMode;
 import org.eclipse.kura.web.shared.model.GwtWifiConfig;
 import org.eclipse.kura.web.shared.model.GwtWifiNetInterfaceConfig;
+import org.eclipse.kura.web.shared.model.GwtWifiSecurity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,8 @@ public class NetworkConfigurationServicePropertiesBuilder {
     private final NetworkConfigurationServiceProperties properties;
     private final String ifname;
 
-    private static final Logger logger = LoggerFactory.getLogger(NetworkConfigurationServicePropertiesBuilder.class);
+    private static final Logger logger = LoggerFactory
+            .getLogger(NetworkConfigurationServicePropertiesBuilder.class);
 
     private final GwtNetInterfaceConfig oldGwtNetInterfaceConfig;
 
@@ -234,7 +236,10 @@ public class NetworkConfigurationServicePropertiesBuilder {
 
                 this.properties.setWifiMasterPassphrase(this.ifname, gwtApConfig.getPassword());
             } else {
-                GwtServerUtil.validateUserPassword(gwtWifiConfig.getPassword());
+                if (!gwtWifiConfig.getSecurity().equals(GwtWifiSecurity.netWifiSecurityNONE.name()) 
+                        && !gwtWifiConfig.getSecurity().equals(GwtWifiSecurity.netWifiSecurityWEP.name())) {
+                    GwtServerUtil.validateUserPassword(Optional.empty(), gwtWifiConfig.getPassword());
+                }
                 this.properties.setWifiMasterPassphrase(this.ifname, gwtWifiConfig.getPassword());
             }
         }
@@ -286,7 +291,6 @@ public class NetworkConfigurationServicePropertiesBuilder {
 
                 this.properties.set8021xPassword(this.ifname, gwt8021xConfig.getPassword());
             } else {
-                GwtServerUtil.validateUserPassword(password8021x);
                 this.properties.set8021xPassword(this.ifname, password8021x);
             }
         }

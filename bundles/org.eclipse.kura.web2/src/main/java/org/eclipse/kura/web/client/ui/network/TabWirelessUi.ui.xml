@@ -2,7 +2,7 @@
 
 <!--
 
-    Copyright (c) 2011, 2020 Eurotech and/or its affiliates and others
+    Copyright (c) 2011, 2026 Eurotech and/or its affiliates and others
 
     This program and the accompanying materials are made
     available under the terms of the Eclipse Public License 2.0
@@ -107,20 +107,8 @@
                                 <util:HelpButton ui:field="passwordHelp"/>
                                 <b:HelpBlock color="red"
                                     ui:field="helpPassword" />
-                                <kura:NewPasswordInput type="PASSWORD" b:id="password"
-                                    ui:field="password" allowPlaceholder="true"/>
-                                <b:Button ui:field="buttonPassword"
-                                    icon="EXCHANGE" iconFixedWidth="true" />
-                            </b:FormGroup>
-
-                            <b:FormGroup ui:field="groupVerify">
-                                <b:FormLabel for="verify"
-                                    ui:field="labelVerify" />
-                                <util:HelpButton ui:field="verifyHelp"/>
-                                <b:HelpBlock color="red"
-                                    ui:field="helpVerify" />
-                                <b:Input type="PASSWORD" b:id="verify"
-                                    ui:field="verify" />
+                                <kura:NewPasswordInputForm b:id="passwordInputForm"
+                                    ui:field="passwordInputForm"/>
                             </b:FormGroup>
 
                             <b:FormGroup>

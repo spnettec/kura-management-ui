@@ -15,6 +15,7 @@ package org.eclipse.kura.web.server.util;
 import static org.eclipse.kura.configuration.ConfigurationService.KURA_SERVICE_PID;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -920,16 +921,19 @@ public final class GwtServerUtil {
             if (netConfig instanceof GwtWifiNetInterfaceConfig) {
                 GwtWifiNetInterfaceConfig wifiConfig = (GwtWifiNetInterfaceConfig) netConfig;
                 GwtWifiConfig gwtAPWifiConfig = wifiConfig.getAccessPointWifiConfig();
-                if (gwtAPWifiConfig != null) {
+                if (gwtAPWifiConfig != null && gwtAPWifiConfig.getPassword() != null
+                        && !gwtAPWifiConfig.getPassword().isEmpty()) {
                     gwtAPWifiConfig.setPassword(PASSWORD_PLACEHOLDER);
                 }
 
                 GwtWifiConfig gwtStationWifiConfig = wifiConfig.getStationWifiConfig();
-                if (gwtStationWifiConfig != null) {
+                if (gwtStationWifiConfig != null && gwtStationWifiConfig.getPassword() != null
+                        && !gwtStationWifiConfig.getPassword().isEmpty()) {
                     gwtStationWifiConfig.setPassword(PASSWORD_PLACEHOLDER);
                 }
                 Gwt8021xConfig gwt8021xConfig = wifiConfig.get8021xConfig();
-                if (gwt8021xConfig != null) {
+                if (gwt8021xConfig != null && gwt8021xConfig.getPassword() != null
+                        && !gwt8021xConfig.getPassword().isEmpty()) {
                     gwt8021xConfig.setPassword(PASSWORD_PLACEHOLDER);
                 }
 
@@ -967,10 +971,11 @@ public final class GwtServerUtil {
                 LoginBannerService::getPostLoginBanner);
     }
 
-    public static void validateUserPassword(final String password) throws GwtKuraException {
+    public static void validateUserPassword(final Optional<String> username, final String password)
+            throws GwtKuraException {
 
-        final List<Validator<String>> validators = PasswordStrengthValidators
-                .fromConfig(getPasswordStrenghtRequirements());
+        final List<Validator<String>> validators = PasswordStrengthValidators.fromConfig(username,
+                getPasswordStrenghtRequirements());
 
         final List<String> errors = new ArrayList<>();
 
@@ -999,18 +1004,19 @@ public final class GwtServerUtil {
                     resultDefinitions.add(descriptor);
                 }
             }
-            return null;
+            return (Void) null;
         });
     }
 
     public static void fillDriverDescriptors(List<GwtConfigComponent> resultDescriptors) throws GwtKuraException {
+
         ServiceLocator.applyToServiceOptionally(DriverDescriptorService.class, driverDescriptorService -> {
 
             driverDescriptorService.listDriverDescriptors().stream()
                     .map(descriptor -> GwtServerUtil.toGwtConfigComponent(descriptor,
                             LocaleContextHolder.getLocale().getLanguage()))
                     .filter(Objects::nonNull).forEach(resultDescriptors::add);
-            return null;
+            return (Void) null;
         });
     }
 

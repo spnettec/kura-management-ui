@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.kura.web.client.ui.validator.GwtValidators;
 import org.eclipse.kura.web.shared.model.GwtPasswordStrenghtRequirements;
@@ -61,10 +62,10 @@ public class NewPasswordInput extends Input {
         });
     }
 
-    public void setValidatorsFrom(final GwtPasswordStrenghtRequirements userOptions) {
+    public void setValidatorsFrom(final Optional<String> identityName, final GwtPasswordStrenghtRequirements userOptions) {
         this.validators.clear();
 
-        for (final Validator<String> validator : GwtValidators.newPassword(userOptions)) {
+        for (final Validator<String> validator : GwtValidators.newPassword(identityName, userOptions)) {
             this.validators.add(validator);
         }
     }
