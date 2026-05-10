@@ -20,6 +20,7 @@ import java.util.List;
 import org.eclipse.kura.web.client.ui.validator.GwtValidators;
 import org.eclipse.kura.web.shared.model.GwtPasswordStrenghtRequirements;
 import org.gwtbootstrap3.client.ui.Input;
+import org.gwtbootstrap3.client.ui.constants.InputType;
 import org.gwtbootstrap3.client.ui.form.validator.Validator;
 
 import com.google.gwt.editor.client.Editor;
@@ -78,5 +79,13 @@ public class NewPasswordInput extends Input {
     @Override
     public void addValidator(final Validator<String> validator) {
         this.validators.add(validator);
+    }
+
+    @Override
+    public InputType getType() {
+        if (getElement().getAttribute(TYPE) == null || getElement().getAttribute(TYPE).isEmpty()) {
+            return null;
+        }
+        return InputType.valueOf(getElement().getAttribute(TYPE).toUpperCase());
     }
 }
