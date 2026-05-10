@@ -47,7 +47,6 @@ import org.apache.commons.io.FileCleaningTracker;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.kura.KuraErrorCode;
 import org.eclipse.kura.KuraException;
-import org.eclipse.kura.command.PasswordCommandService;
 import org.eclipse.kura.configuration.ComponentConfiguration;
 import org.eclipse.kura.configuration.ConfigurationService;
 import org.eclipse.kura.core.configuration.ComponentConfigurationImpl;
@@ -198,9 +197,6 @@ public class FileServlet extends AuditServlet {
         } else if (reqPathInfo.equals("/configuration/snapshot")) {
             KuraRemoteServiceServlet.requirePermissions(req, Mode.ALL, new String[] { KuraPermission.ADMIN });
             doPostConfigurationSnapshot(req);
-        } else if (reqPathInfo.equals("/command") && supportedFeatures.isCommandServiceAvailable()) {
-            KuraRemoteServiceServlet.requirePermissions(req, Mode.ALL, new String[] { KuraPermission.DEVICE });
-            doPostCommand(req);
         } else if (reqPathInfo.equals("/asset")) {
             KuraRemoteServiceServlet.requirePermissions(req, Mode.ALL, new String[] { KuraPermission.WIRES_ADMIN });
             doPostAsset(req, resp);
@@ -300,119 +296,6 @@ public class FileServlet extends AuditServlet {
                     URLDecoder.decode(p.substring(index + 1), StandardCharsets.UTF_8.name()));
         }
         return qp;
-    }
-
-    private void doPostCommand(HttpServletRequest req) throws ServletException, IOException {
-        UploadRequest upload = new UploadRequest(this.diskFileItemFactory);
-        upload.setHeaderCharset(StandardCharsets.UTF_8);
-
-        try {
-            upload.parse(req);
-        } catch (FileUploadException e) {
-            logger.error(ERROR_PARSING_THE_FILE_UPLOAD_REQUEST);
-            throw new ServletException(ERROR_PARSING_THE_FILE_UPLOAD_REQUEST);
-        }
-
-        // BEGIN XSRF - Servlet dependent code
-        Map<String, String> formFields = upload.getFormFields();
-
-        try {
-            GwtXSRFToken token = new GwtXSRFToken(formFields.get(XSRF_TOKEN));
-            KuraRemoteServiceServlet.checkXSRFToken(req, token);
-        } catch (Exception e) {
-            throw new ServletException("Security error: please retry this operation correctly.");
-        }
-        // END XSRF security check
-
-        final ServiceReference<PasswordCommandService> commandServiceReference = this.bundleContext
-                .getServiceReference(PasswordCommandService.class);
-
-        String workingDir = (String) commandServiceReference.getProperty("command.working.directory");
-        if (isNull(workingDir) || workingDir.isEmpty() || !Files.isDirectory(Paths.get(workingDir))) {
-            workingDir = System.getProperty(JAVA_IO_TMPDIR, "/tmp");
-        }
-
-        List<DiskFileItem> fileItems = null;
-        InputStream is = null;
-        File localFolder = new File(workingDir);
-        OutputStream os = null;
-
-        try {
-            fileItems = upload.getFileItems();
-
-            if (!fileItems.isEmpty()) {
-                DiskFileItem item = fileItems.get(0);
-                is = item.getInputStream();
-
-                byte[] bytes = IOUtils.toByteArray(is);
-                ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bytes));
-
-                int entries = 0;
-                long total = 0;
-                ZipEntry ze = zis.getNextEntry();
-                while (ze != null) {
-                    byte[] buffer = new byte[BUFFER];
-
-                    String expectedFilePath = new StringBuilder(localFolder.getPath()).append(File.separator)
-                            .append(ze.getName()).toString();
-                    String fileName = validateFileName(expectedFilePath, localFolder.getPath());
-                    File newFile = new File(fileName);
-                    if (ze.isDirectory()) {
-                        newFile.mkdirs();
-                        ze = zis.getNextEntry();
-                        continue;
-                    }
-                    if (newFile.getParent() != null) {
-                        File parent = new File(newFile.getParent());
-                        parent.mkdirs();
-                    }
-
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while (total + BUFFER <= tooBig && (len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
-                        total += len;
-                    }
-                    fos.flush();
-                    fos.close();
-
-                    entries++;
-                    if (entries > tooMany) {
-                        throw new IllegalStateException("Too many files to unzip.");
-                    }
-                    if (total > tooBig) {
-                        throw new IllegalStateException("File being unzipped is too big.");
-                    }
-
-                    ze = zis.getNextEntry();
-                }
-
-                zis.closeEntry();
-                zis.close();
-            }
-        } catch (GwtKuraException e) {
-            throw new ServletException("File is outside extraction target directory.");
-        } finally {
-            if (os != null) {
-                try {
-                    os.close();
-                } catch (IOException e) {
-                    logger.warn(CANNOT_CLOSE_OUTPUT_STREAM, e);
-                }
-            }
-            if (is != null) {
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    logger.warn(CANNOT_CLOSE_INPUT_STREAM, e);
-                }
-            }
-            if (fileItems != null) {
-                for (DiskFileItem fileItem : fileItems) {
-                    fileItem.delete();
-                }
-            }
-        }
     }
 
     private String validateFileName(String zipFileName, String intendedDir) throws IOException, GwtKuraException {

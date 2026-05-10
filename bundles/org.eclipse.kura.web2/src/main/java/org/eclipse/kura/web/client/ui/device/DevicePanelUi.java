@@ -60,8 +60,6 @@ public class DevicePanelUi extends Composite {
     TabListItem systemProperties;
     @UiField
     TabListItem containers;
-    @UiField
-    TabListItem command;
 
     @UiField
     ProfileTabUi profilePanel;
@@ -73,8 +71,6 @@ public class DevicePanelUi extends Composite {
     SystemPackagesTabUi packagesPanel;
     @UiField
     SystemPropertiesTabUi systemPropertiesPanel;
-    @UiField
-    CommandTabUi commandPanel;
     @UiField
     LogTabUi logPanel;
     @UiField
@@ -93,14 +89,10 @@ public class DevicePanelUi extends Composite {
 
         this.containers.setVisible(false); // hidden by default
 
-        this.command.setVisible(supportedFeatures.isCommandServiceAvailable());
-        this.commandPanel.setVisible(supportedFeatures.isCommandServiceAvailable());
-
     }
 
     public void initDevicePanel() {
         this.profilePanel.refresh();
-        this.commandPanel.setSession(this.session);
         this.logPanel.initialize();
         checkIfContainerOrchestratorIsAvaliable();
     }

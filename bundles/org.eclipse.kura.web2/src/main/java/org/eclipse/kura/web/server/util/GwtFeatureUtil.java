@@ -15,7 +15,6 @@ package org.eclipse.kura.web.server.util;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.eclipse.kura.command.PasswordCommandService;
 import org.eclipse.kura.driver.descriptor.DriverDescriptorService;
 import org.eclipse.kura.web.shared.model.GwtSupportedFeatures;
 import org.eclipse.kura.wire.graph.WireComponentDefinitionService;
@@ -43,8 +42,6 @@ public class GwtFeatureUtil {
 
         result.setAssetAvailable(wiredPackages.contains("org.eclipse.kura.asset.provider")
                 && wiredPackages.contains("org.eclipse.kura.internal.wire.asset"));
-
-        result.setCommandServiceAvailable(isProviderServiceAvailable(PasswordCommandService.class, bundleContext));
 
         return result;
     }

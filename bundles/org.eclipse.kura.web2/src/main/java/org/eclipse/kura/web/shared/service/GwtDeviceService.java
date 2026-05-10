@@ -55,9 +55,6 @@ public interface GwtDeviceService extends RemoteService {
     @RequiredPermissions({})
     public GwtSupportedFeatures getSupportedFeatures(GwtXSRFToken xsrfToken) throws GwtKuraException;
 
-    @Audit(componentName = "UI Device", description = "Execute command")
-    public String executeCommand(GwtXSRFToken xsrfToken, String cmd, String pwd) throws GwtKuraException;
-
     @Audit(componentName = "UI Device", description = "Start container")
     public void startContainer(GwtXSRFToken xsrfToken, String containerName) throws GwtKuraException;
 

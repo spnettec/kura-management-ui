@@ -41,8 +41,6 @@
                         ui:field="packages" />
                     <b:TabListItem dataTarget="#systemPropertiesPanel" text="{msgs.deviceTabSystemProperties}"
                         ui:field="systemProperties" />
-                    <b:TabListItem dataTarget="#commandPanel" text="{msgs.deviceTabCommand}"
-                        ui:field="command" />
                     <b:TabListItem dataTarget="#logPanel" text="{msgs.deviceTabSystemLogs}"
                         ui:field="log" />
                 </b:NavTabs>
@@ -64,9 +62,6 @@
                     </b:TabPane>
                     <b:TabPane b:id="systemPropertiesPanel">
                         <device:SystemPropertiesTabUi ui:field="systemPropertiesPanel"></device:SystemPropertiesTabUi>
-                    </b:TabPane>
-                    <b:TabPane b:id="commandPanel">
-                        <device:CommandTabUi ui:field="commandPanel"></device:CommandTabUi>
                     </b:TabPane>
                     <b:TabPane b:id="logPanel">
                         <device:LogTabUi ui:field="logPanel"></device:LogTabUi>

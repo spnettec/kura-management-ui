@@ -96,8 +96,6 @@ public class ServicesAnchorListItem extends AnchorListItem {
             return IconType.CHAIN;
         } else if (name.startsWith("WebConsole")) {
             return IconType.LAPTOP;
-        } else if (name.startsWith("CommandService")) {
-            return IconType.TERMINAL;
         } else if (name.startsWith("DenaliService")) {
             return IconType.SPINNER;
         } else if (name.contains("H2Db")) {
