@@ -257,6 +257,10 @@ public class KuraRemoteServiceServlet extends RemoteServiceServlet {
                 // ignore
             }
         }
+        if (e instanceof IOException && e.getMessage() != null
+                && e.getMessage().contains("Idle timeout expired")) {
+            return;
+        }
         super.doUnexpectedFailure(e);
     }
 

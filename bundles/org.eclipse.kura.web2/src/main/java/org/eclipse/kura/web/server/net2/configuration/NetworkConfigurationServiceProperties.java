@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.kura.configuration.Password;
-import org.eclipse.kura.core.net.util.NetworkUtil;
+import org.eclipse.kura.util.net.NetworkUtil;
 import org.eclipse.kura.web.shared.model.GwtNetIfStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

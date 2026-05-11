@@ -23,10 +23,13 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ServiceLocator {
 
     private static final ServiceLocator s_instance = new ServiceLocator();
+    private static final Logger logger = LoggerFactory.getLogger(ServiceLocator.class);
 
     private final BundleContext bundleContext;
 
@@ -43,6 +46,7 @@ public class ServiceLocator {
         ServiceReference<T> sr = this.bundleContext.getServiceReference(serviceClass);
 
         if (sr == null) {
+            logger.warn("Service {} not found in OSGi registry", serviceClass.getName());
             throw GwtKuraException.internalError(serviceClass.toString() + " not found.");
         }
         return sr;
@@ -241,6 +245,10 @@ public class ServiceLocator {
             service = this.bundleContext.getService(serviceReference);
         }
         if (service == null) {
+            String className = serviceReference != null
+                    ? serviceReference.getClass().getName()
+                    : "unknown";
+            logger.warn("Service instance not found for reference: {}", className);
             throw GwtKuraException.internalError("Service not found.");
         }
         return service;
