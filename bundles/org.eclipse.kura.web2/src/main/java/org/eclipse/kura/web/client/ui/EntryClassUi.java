@@ -435,7 +435,7 @@ public class EntryClassUi extends Composite implements ServicesUi.Listener {
 
         initUsersPanel();
 
-        initCloudServicesPanel();
+        initCloudServicesPanel(gwtSession);
 
     }
 
@@ -481,8 +481,13 @@ public class EntryClassUi extends Composite implements ServicesUi.Listener {
         });
     }
 
-    private void initCloudServicesPanel() {
+    private void initCloudServicesPanel(GwtSession gwtSession) {
         if (!this.userData.checkPermission(KuraPermission.CLOUD_CONNECTION_ADMIN)) {
+            this.cloudServices.setVisible(false);
+            return;
+        }
+
+        if (!gwtSession.isCloudConnectionAvailable()) {
             this.cloudServices.setVisible(false);
             return;
         }

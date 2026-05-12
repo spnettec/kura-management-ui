@@ -150,15 +150,25 @@ public class StatusPanelUi extends Composite {
     // fetch table data
     public void loadStatusData(boolean recompute) {
         this.statusGridProvider.getList().clear();
+        final boolean cloudAvailable = this.currentSession != null
+                && this.currentSession.isCloudConnectionAvailable();
         RequestQueue.submit(c -> this.gwtXSRFService
                 .generateSecurityToken(c.callback(token -> StatusPanelUi.this.gwtStatusService.getDeviceConfig(token,
                         StatusPanelUi.this.currentSession.isNetAdminAvailable(), recompute, c.callback(result -> {
                             String title = "cloudStatus";
-                            StatusPanelUi.this.statusGridProvider.getList().add(new GwtGroupedNVPair(" ", title, " "));
+                            if (cloudAvailable) {
+                                StatusPanelUi.this.statusGridProvider.getList()
+                                        .add(new GwtGroupedNVPair(" ", title, " "));
+                            }
 
                             Iterator<GwtGroupedNVPair> it = result.iterator();
                             while (it.hasNext()) {
                                 GwtGroupedNVPair connectionName = it.next();
+                                // Skip cloud connection entries when cloud is not available
+                                if (!cloudAvailable && ("cloudStatus".equals(connectionName.getGroup())
+                                        || "Connection Name".equals(connectionName.getGroup()))) {
+                                    continue;
+                                }
                                 if (!title.equals(connectionName.getGroup())) {
                                     title = connectionName.getGroup();
                                     if ("Connection Name".equals(title)) {
