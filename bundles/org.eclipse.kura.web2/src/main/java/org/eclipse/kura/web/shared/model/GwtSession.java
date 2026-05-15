@@ -19,6 +19,7 @@ public class GwtSession extends GwtBaseModel implements Serializable {
     private static final long serialVersionUID = -2507268464782812398L;
 
     private boolean m_netAdminAvailable;
+    private boolean m_firewallAdminAvailable;
     private boolean m_cloudConnectionAvailable;
     private String m_kuraVersion;
     private String m_osVersion;
@@ -26,6 +27,7 @@ public class GwtSession extends GwtBaseModel implements Serializable {
 
     public GwtSession() {
         this.m_netAdminAvailable = true;
+        this.m_firewallAdminAvailable = true;
         this.m_cloudConnectionAvailable = true;
         this.m_kuraVersion = "version-unknown";
     }
@@ -36,6 +38,14 @@ public class GwtSession extends GwtBaseModel implements Serializable {
 
     public void setNetAdminAvailable(boolean haveNetAdmin) {
         this.m_netAdminAvailable = haveNetAdmin;
+    }
+
+    public boolean isFirewallAdminAvailable() {
+        return this.m_firewallAdminAvailable;
+    }
+
+    public void setFirewallAdminAvailable(boolean haveFirewallAdmin) {
+        this.m_firewallAdminAvailable = haveFirewallAdmin;
     }
 
     public boolean isCloudConnectionAvailable() {

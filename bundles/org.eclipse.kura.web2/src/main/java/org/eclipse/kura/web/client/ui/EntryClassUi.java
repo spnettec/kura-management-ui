@@ -402,6 +402,10 @@ public class EntryClassUi extends Composite implements ServicesUi.Listener {
         if (!gwtSession.isNetAdminAvailable()
                 || !this.userData.checkPermissions(Collections.singleton(KuraPermission.NETWORK_ADMIN))) {
             this.network.setVisible(false);
+        }
+
+        if (!gwtSession.isFirewallAdminAvailable()
+                || !this.userData.checkPermissions(Collections.singleton(KuraPermission.NETWORK_ADMIN))) {
             this.firewall.setVisible(false);
         }
 

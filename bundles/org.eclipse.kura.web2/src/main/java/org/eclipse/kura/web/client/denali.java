@@ -108,6 +108,10 @@ public class denali implements EntryPoint {
                                     Boolean value = Boolean.valueOf(pair.getValue());
                                     gwtSession.setNetAdminAvailable(value);
                                 }
+                                if ("kura.have.firewall.admin".equals(name)) {
+                                    Boolean value = Boolean.valueOf(pair.getValue());
+                                    gwtSession.setFirewallAdminAvailable(value);
+                                }
                                 if ("kura.have.cloud.connection".equals(name)) {
                                     Boolean value = Boolean.valueOf(pair.getValue());
                                     gwtSession.setCloudConnectionAvailable(value);
