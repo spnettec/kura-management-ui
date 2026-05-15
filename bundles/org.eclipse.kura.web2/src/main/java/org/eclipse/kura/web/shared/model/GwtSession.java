@@ -27,7 +27,7 @@ public class GwtSession extends GwtBaseModel implements Serializable {
 
     public GwtSession() {
         this.m_netAdminAvailable = true;
-        this.m_firewallAdminAvailable = true;
+        this.m_firewallAdminAvailable = false;
         this.m_cloudConnectionAvailable = true;
         this.m_kuraVersion = "version-unknown";
     }
