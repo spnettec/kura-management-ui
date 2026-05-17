@@ -50,7 +50,6 @@ public class TabIp6Ui extends Composite implements NetworkTab {
     private static final String STATUS_LAN = "netIPv6StatusEnabledLAN";
     private static final String STATUS_WAN = "netIPv6StatusEnabledWAN";
     private static final String CONFIGURE_AUTO = "netIPv6MethodAuto";
-    private static final String CONFIGURE_DHCP = "netIPv6MethodDhcp";
     private static final String CONFIGURE_MANUAL = "netIPv6MethodManual";
     private static final String AUTOCONF_EUI64 = "netIPv6AddressGenModeEUI64";
     private static final String AUTOCONF_STABLEPRIVACY = "netIPv6AddressGenModeStablePrivacy";
@@ -248,7 +247,6 @@ public class TabIp6Ui extends Composite implements NetworkTab {
 
     private void initConfigureField() {
         this.configure.addItem(MessageUtils.get(CONFIGURE_AUTO), CONFIGURE_AUTO);
-        this.configure.addItem(MessageUtils.get(CONFIGURE_DHCP), CONFIGURE_DHCP);
         this.configure.addItem(MessageUtils.get(CONFIGURE_MANUAL), CONFIGURE_MANUAL);
 
         this.configure.addMouseOverHandler(event -> {
@@ -560,15 +558,13 @@ public class TabIp6Ui extends Composite implements NetworkTab {
             this.dns.setText("");
         }
 
-        if (this.configure.getSelectedValue().equals(CONFIGURE_AUTO)
-                || this.configure.getSelectedValue().equals(CONFIGURE_DHCP)) {
+        if (this.configure.getSelectedValue().equals(CONFIGURE_AUTO)) {
             this.ip.setEnabled(false);
             this.subnet.setEnabled(false);
             this.gateway.setEnabled(false);
         }
 
-        if (this.configure.getSelectedValue().equals(CONFIGURE_MANUAL)
-                || this.configure.getSelectedValue().equals(CONFIGURE_DHCP)) {
+        if (this.configure.getSelectedValue().equals(CONFIGURE_MANUAL)) {
             this.autoconfiguration.setEnabled(false);
             this.privacy.setEnabled(false);
         }
