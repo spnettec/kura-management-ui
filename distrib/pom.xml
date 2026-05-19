@@ -45,6 +45,18 @@
         <package.name>kura-management-ui</package.name>
     </properties>
 
+    <!-- Declared so the Maven reactor orders distrib AFTER the web2 bundle.
+         Without it, a parallel build (`mvn -T 1C`) can run this module's
+         copy-resources before web2 has finished packaging, and the deb gets
+         packed with a stale jar from the previous build. -->
+    <dependencies>
+        <dependency>
+            <groupId>org.eclipse.kura</groupId>
+            <artifactId>${web2.jar.name}</artifactId>
+            <version>${web2.version}</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
 
@@ -93,29 +105,33 @@
                 </configuration>
             </plugin>
 
-            <!-- Stage the web2 JAR (built by the kura monorepo reactor via Tycho) into a
-                 known location so jdeb can pick it up. -->
+            <!-- Stage the web2 JAR from ~/.m2 (Tycho installed it there in the
+                 previous reactor step) into a known location so jdeb can pick
+                 it up. Resolving via maven-dependency-plugin guarantees we
+                 read the artifact that was just `install`-ed, not whatever
+                 partial file may still be in the sibling bundle's target/. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
                         <id>stage-web2-jar</id>
                         <phase>prepare-package</phase>
                         <goals>
-                            <goal>copy-resources</goal>
+                            <goal>copy</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${project.build.directory}/input_files</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>${project.basedir}/../bundles/${web2.jar.name}/target</directory>
-                                    <filtering>false</filtering>
-                                    <includes>
-                                        <include>${web2.jar.name}-${web2.version}.jar</include>
-                                    </includes>
-                                </resource>
-                            </resources>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.eclipse.kura</groupId>
+                                    <artifactId>${web2.jar.name}</artifactId>
+                                    <version>${web2.version}</version>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/input_files</outputDirectory>
+                                    <destFileName>${web2.jar.name}-${web2.version}.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
                         </configuration>
                     </execution>
                 </executions>
