@@ -81,7 +81,8 @@ public class StatusPanelUi extends Composite {
         this.statusGrid.setRowStyles((row, rowIndex) -> {
             if ("cloudStatus".equals(row.getName()) || "connectionName".equals(row.getName())
                     || "networkStatusEthernet".equals(row.getName()) || "networkStatusWifi".equals(row.getName())
-                    || "networkStatusModem".equals(row.getName()) || "positionStatus".equals(row.getName())
+                    || "networkStatusModem".equals(row.getName()) || "networkStatus".equals(row.getName())
+                    || "deviceInfo".equals(row.getName()) || "positionStatus".equals(row.getName())
                     || "tamperDetection".equals(row.getName())) {
                 return "rowHeader";
             } else {

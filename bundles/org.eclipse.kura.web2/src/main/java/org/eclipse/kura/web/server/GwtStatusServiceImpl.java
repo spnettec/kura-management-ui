@@ -19,14 +19,19 @@ import static java.util.Comparator.comparing;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsFirst;
 
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.kura.cloud.CloudService;
 import org.eclipse.kura.cloudconnection.CloudConnectionManager;
@@ -38,6 +43,7 @@ import org.eclipse.kura.position.PositionService;
 import org.eclipse.kura.security.tamper.detection.TamperDetectionProperties;
 import org.eclipse.kura.security.tamper.detection.TamperDetectionService;
 import org.eclipse.kura.security.tamper.detection.TamperStatus;
+import org.eclipse.kura.system.SystemService;
 import org.eclipse.kura.type.TypedValue;
 import org.eclipse.kura.web.server.util.ServiceLocator;
 import org.eclipse.kura.web.shared.GwtKuraException;
@@ -83,14 +89,149 @@ public class GwtStatusServiceImpl extends OsgiRemoteServiceServlet implements Gw
         checkXSRFToken(xsrfToken);
         List<GwtGroupedNVPair> pairs = new ArrayList<>();
 
+        // Always include the device summary + basic IP listing. These come from
+        // SystemService (monorepo, always available) and the JDK; they keep the
+        // Status page useful when the networking / cloud / position siblings
+        // are not installed (e.g. UI-only or UI+firewall-only deployments).
+        pairs.addAll(getDeviceSummary());
         pairs.addAll(getCloudStatus());
         if (hasNetAdmin) {
             pairs.addAll(getNetworkStatus(recompute));
+        } else {
+            pairs.addAll(getBasicNetworkInfo());
         }
         pairs.addAll(getPositionStatus());
         pairs.addAll(getTamperDetectionStatus());
 
         return new ArrayList<>(pairs);
+    }
+
+    private List<GwtGroupedNVPair> getDeviceSummary() {
+        final List<GwtGroupedNVPair> pairs = new ArrayList<>();
+        try {
+            ServiceLocator.applyToServiceOptionally(SystemService.class, systemService -> {
+                if (systemService == null) {
+                    return null;
+                }
+                addPair(pairs, "deviceInfo", "Kura Version", systemService.getKuraVersion());
+                addPair(pairs, "deviceInfo", "Device Name", systemService.getDeviceName());
+                addPair(pairs, "deviceInfo", "Hostname", systemService.getHostname());
+                addPair(pairs, "deviceInfo", "Platform", systemService.getPlatform());
+                addPair(pairs, "deviceInfo", "Model", systemService.getModelName());
+                addPair(pairs, "deviceInfo", "Serial Number", systemService.getSerialNumber());
+                addPair(pairs, "deviceInfo", "Firmware Version", systemService.getFirmwareVersion());
+                addPair(pairs, "deviceInfo", "OS",
+                        joinNonEmpty(systemService.getOsName(), systemService.getOsVersion()));
+                addPair(pairs, "deviceInfo", "OS Architecture", systemService.getOsArch());
+                addPair(pairs, "deviceInfo", "Java VM",
+                        joinNonEmpty(systemService.getJavaVmName(), systemService.getJavaVmVersion()));
+                addPair(pairs, "deviceInfo", "Java Version",
+                        joinNonEmpty(systemService.getJavaVendor(), systemService.getJavaVersion()));
+                addPair(pairs, "deviceInfo", "OSGi Framework",
+                        joinNonEmpty(systemService.getOsgiFwName(), systemService.getOsgiFwVersion()));
+                addPair(pairs, "deviceInfo", "Uptime", formatUptime(ManagementFactory.getRuntimeMXBean().getUptime()));
+                return null;
+            });
+        } catch (GwtKuraException e) {
+            logger.warn("failed to get device summary", e);
+        }
+        return pairs;
+    }
+
+    private static void addPair(List<GwtGroupedNVPair> pairs, String group, String name, String value) {
+        if (value == null || value.isEmpty() || "UNKNOWN".equalsIgnoreCase(value)) {
+            return;
+        }
+        pairs.add(new GwtGroupedNVPair(group, name, value));
+    }
+
+    private static String joinNonEmpty(String a, String b) {
+        if (a == null || a.isEmpty()) {
+            return b == null ? "" : b;
+        }
+        if (b == null || b.isEmpty()) {
+            return a;
+        }
+        return a + " " + b;
+    }
+
+    private static String formatUptime(long millis) {
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+        long days = seconds / 86400;
+        long hours = (seconds % 86400) / 3600;
+        long minutes = (seconds % 3600) / 60;
+        long secs = seconds % 60;
+        if (days > 0) {
+            return format("%dd %02dh %02dm %02ds", days, hours, minutes, secs);
+        }
+        if (hours > 0) {
+            return format("%02dh %02dm %02ds", hours, minutes, secs);
+        }
+        return format("%02dm %02ds", minutes, secs);
+    }
+
+    // Fallback when kura-networking is not installed: enumerate IP addresses
+    // straight from the JDK. We deliberately leave out interface mode / WiFi
+    // SSID / router mode / etc. — those need the NetworkConfigurationService.
+    private List<GwtGroupedNVPair> getBasicNetworkInfo() {
+        final List<GwtGroupedNVPair> pairs = new ArrayList<>();
+        try {
+            Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+            if (ifaces == null) {
+                return pairs;
+            }
+            List<NetworkInterface> sorted = new ArrayList<>(Collections.list(ifaces));
+            sorted.sort(comparing(NetworkInterface::getName, nullsFirst(naturalOrder())));
+
+            for (NetworkInterface iface : sorted) {
+                try {
+                    if (iface.isLoopback() || !iface.isUp()) {
+                        continue;
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+                String value = formatInterfaceAddresses(iface);
+                if (value.isEmpty()) {
+                    continue;
+                }
+                pairs.add(new GwtGroupedNVPair("networkStatus", iface.getName(), value));
+            }
+        } catch (Exception e) {
+            logger.warn("failed to enumerate network interfaces for basic status", e);
+        }
+        return pairs;
+    }
+
+    private static String formatInterfaceAddresses(NetworkInterface iface) {
+        StringBuilder ipv4 = new StringBuilder();
+        StringBuilder ipv6 = new StringBuilder();
+        Enumeration<InetAddress> addrs = iface.getInetAddresses();
+        while (addrs.hasMoreElements()) {
+            InetAddress addr = addrs.nextElement();
+            String host = addr.getHostAddress();
+            // Strip zone id like fe80::1%eth0
+            int pct = host.indexOf('%');
+            if (pct >= 0) {
+                host = host.substring(0, pct);
+            }
+            StringBuilder target = host.contains(":") ? ipv6 : ipv4;
+            if (target.length() != 0) {
+                target.append(NL).append(TAB);
+            }
+            target.append(host);
+        }
+        StringBuilder sb = new StringBuilder();
+        if (ipv4.length() != 0) {
+            sb.append("<b>IPv4</b>").append(NL).append(TAB).append(ipv4);
+        }
+        if (ipv6.length() != 0) {
+            if (sb.length() != 0) {
+                sb.append(NL);
+            }
+            sb.append("<b>IPv6</b>").append(NL).append(TAB).append(ipv6);
+        }
+        return sb.toString();
     }
 
     private List<GwtGroupedNVPair> getTamperDetectionStatus() {
