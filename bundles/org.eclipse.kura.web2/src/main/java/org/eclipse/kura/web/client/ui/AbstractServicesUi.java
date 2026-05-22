@@ -325,6 +325,13 @@ public abstract class AbstractServicesUi extends Composite {
         if (param.getId().endsWith(TARGET_SUFFIX)) {
             return new KuraTextBox();
         }
+        final String editorMode = getEditorMode(param);
+        if (editorMode != null) {
+            // Description marker |Editor:<lang> swaps the textarea for an ACE
+            // code editor. Falls back to a plain textarea internally if
+            // window.ace failed to load.
+            return new CodeEditorTextArea(editorMode);
+        }
         if (param.getDescription() != null && param.getDescription().contains("\u200B\u200B\u200B\u200B\u200B")) {
             final ExtendedTextArea result = createTextArea();
             result.setHeight("500px");
@@ -334,6 +341,36 @@ public abstract class AbstractServicesUi extends Composite {
             return createTextArea();
         }
         return new ExtendedTextBox();
+    }
+
+    /**
+     * Returns the editor language id when a parameter's description ends with
+     * {@code |Editor:<lang>} (e.g. {@code |Editor:java}, {@code |Editor:groovy},
+     * {@code |Editor:xml}, {@code |Editor:yaml}). Returns {@code null} otherwise.
+     *
+     * <p>Recognized lang ids correspond to ACE mode files shipped under
+     * {@code www/ace/mode-*.js}. Unknown ids are passed through verbatim \u2014 ACE
+     * will silently fall back to plain text if the mode file is missing.
+     */
+    private static String getEditorMode(final GwtConfigParameter param) {
+        if (param == null || param.getType() != GwtConfigParameterType.STRING) {
+            return null;
+        }
+        final String description = param.getDescription();
+        if (description == null) {
+            return null;
+        }
+        final String[] result = splitDescription(description);
+        if (result.length < 2 || result[1] == null) {
+            return null;
+        }
+        final String marker = result[1].trim();
+        final String prefix = "Editor:";
+        if (!marker.regionMatches(true, 0, prefix, 0, prefix.length())) {
+            return null;
+        }
+        final String mode = marker.substring(prefix.length()).trim().toLowerCase();
+        return mode.isEmpty() ? null : mode;
     }
 
     private boolean isTextArea(final GwtConfigParameter param) {
