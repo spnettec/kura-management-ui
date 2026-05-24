@@ -39,6 +39,9 @@
         <web2.jar.name>org.eclipse.kura.web2</web2.jar.name>
         <web2.version>3.0.0-SNAPSHOT</web2.version>
 
+        <!-- Sibling-only support libs (previously shipped via monorepo kura-core.deb). -->
+        <commons-csv.version>1.14.0</commons-csv.version>
+
         <!-- pure-Java GWT artifact: no native bits, deb is arch-neutral -->
         <deb.architecture>all</deb.architecture>
 
@@ -54,6 +57,11 @@
             <groupId>org.eclipse.kura</groupId>
             <artifactId>${web2.jar.name}</artifactId>
             <version>${web2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>${commons-csv.version}</version>
         </dependency>
     </dependencies>
 
@@ -131,6 +139,13 @@
                                     <outputDirectory>${project.build.directory}/input_files</outputDirectory>
                                     <destFileName>${web2.jar.name}-${web2.version}.jar</destFileName>
                                 </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.commons</groupId>
+                                    <artifactId>commons-csv</artifactId>
+                                    <version>${commons-csv.version}</version>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/input_files</outputDirectory>
+                                </artifactItem>
                             </artifactItems>
                         </configuration>
                     </execution>
@@ -160,6 +175,17 @@
                                 <data>
                                     <src>${project.build.directory}/input_files/${web2.jar.name}-${web2.version}.jar</src>
                                     <dst>${web2.jar.name}_${web2.version}.jar</dst>
+                                    <type>file</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>${addon.installation.dir}/6s</prefix>
+                                        <user>kurad</user>
+                                        <group>kurad</group>
+                                        <filemode>600</filemode>
+                                    </mapper>
+                                </data>
+                                <data>
+                                    <src>${project.build.directory}/input_files/commons-csv-${commons-csv.version}.jar</src>
                                     <type>file</type>
                                     <mapper>
                                         <type>perm</type>

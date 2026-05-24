@@ -51,6 +51,12 @@
                     <version>6.0.0-SNAPSHOT</version>
                     <type>pom</type>
                 </dependency>
+                <!-- Sibling-only deps (removed from monorepo target-platform-pde-deps). -->
+                <dependency>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-csv</artifactId>
+                    <version>1.14.0</version>
+                </dependency>
             </dependencies>
 
             <repositories>
