@@ -26,6 +26,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.kura.KuraException;
@@ -81,6 +86,8 @@ import org.eclipse.kura.web.session.SessionLockedSecurityHandler;
 import org.eclipse.kura.web.shared.model.GwtSupportedFeatures;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.event.Event;
@@ -145,6 +152,12 @@ public class Console implements SelfConfiguringComponent {
             Arrays.asList(AUTH_PATH, PASSWORD_AUTH_PATH, CERT_AUTH_PATH));
 
     private BundleContext bundleContext;
+
+    private ServiceListener featureServiceListener;
+    private final AtomicBoolean wiresServiceAvailable = new AtomicBoolean(false);
+    private final AtomicBoolean driverServiceAvailable = new AtomicBoolean(false);
+    private final ScheduledExecutorService serviceChangeExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final AtomicReference<ScheduledFuture<?>> pendingReinit = new AtomicReference<>();
 
     private static Console instance;
 
@@ -226,6 +239,8 @@ public class Console implements SelfConfiguringComponent {
         logger.info("postInstalledEvent() :: posting KuraConfigReadyEvent");
 
         this.eventAdmin.postEvent(new Event(KuraConfigReadyEvent.KURA_CONFIG_EVENT_READY_TOPIC, eventProps));
+
+        registerFeatureServiceListener();
     }
 
     private void setAppRoot(String propertiesAppRoot) {
@@ -281,6 +296,7 @@ public class Console implements SelfConfiguringComponent {
     protected void deactivate() {
         logger.info("deactivate...");
 
+        unregisterFeatureServiceListener();
         unregisterAll();
     }
 
@@ -303,6 +319,111 @@ public class Console implements SelfConfiguringComponent {
         this.resources.clear();
         this.servlets.clear();
 
+    }
+
+    /**
+     * Registers a ServiceListener to detect when feature-gating services
+     * (WireComponentDefinitionService, DriverDescriptorService) appear or
+     * disappear at runtime. This allows the web console to dynamically show
+     * or hide menu items when bundles are installed via .dp after startup.
+     */
+    private void registerFeatureServiceListener() {
+        this.wiresServiceAvailable.set(
+                this.bundleContext.getServiceReference(
+                        "org.eclipse.kura.wire.graph.WireComponentDefinitionService") != null);
+        this.driverServiceAvailable.set(
+                this.bundleContext.getServiceReference(
+                        "org.eclipse.kura.driver.descriptor.DriverDescriptorService") != null);
+
+        this.featureServiceListener = this::handleFeatureServiceEvent;
+        try {
+            String filter = "(|(objectClass=org.eclipse.kura.wire.graph.WireComponentDefinitionService)"
+                    + "(objectClass=org.eclipse.kura.driver.descriptor.DriverDescriptorService))";
+            this.bundleContext.addServiceListener(this.featureServiceListener, filter);
+            logger.info("Registered feature service listener for dynamic menu detection");
+        } catch (Exception e) {
+            logger.warn("Failed to register feature service listener", e);
+        }
+    }
+
+    private void unregisterFeatureServiceListener() {
+        if (this.featureServiceListener != null && this.bundleContext != null) {
+            try {
+                this.bundleContext.removeServiceListener(this.featureServiceListener);
+            } catch (IllegalStateException e) {
+                // BundleContext already invalid, ignore
+            }
+            this.featureServiceListener = null;
+        }
+
+        ScheduledFuture<?> pending = this.pendingReinit.getAndSet(null);
+        if (pending != null) {
+            pending.cancel(false);
+        }
+        this.serviceChangeExecutor.shutdownNow();
+    }
+
+    private void handleFeatureServiceEvent(ServiceEvent event) {
+        boolean wiresChanged = false;
+        boolean driverChanged = false;
+
+        if (event.getType() == ServiceEvent.REGISTERED) {
+            Object rawClasses = event.getServiceReference().getProperty(Constants.OBJECTCLASS);
+            if (rawClasses instanceof String[]) {
+                String[] classes = (String[]) rawClasses;
+                for (String clazz : classes) {
+                    if ("org.eclipse.kura.wire.graph.WireComponentDefinitionService".equals(clazz)
+                            && this.wiresServiceAvailable.compareAndSet(false, true)) {
+                        wiresChanged = true;
+                    }
+                    if ("org.eclipse.kura.driver.descriptor.DriverDescriptorService".equals(clazz)
+                            && this.driverServiceAvailable.compareAndSet(false, true)) {
+                        driverChanged = true;
+                    }
+                }
+            }
+        } else if (event.getType() == ServiceEvent.UNREGISTERING) {
+            // Re-check via BundleContext: if no more services, it's gone
+            if (this.bundleContext.getServiceReference(
+                    "org.eclipse.kura.wire.graph.WireComponentDefinitionService") == null
+                    && this.wiresServiceAvailable.compareAndSet(true, false)) {
+                wiresChanged = true;
+            }
+            if (this.bundleContext.getServiceReference(
+                    "org.eclipse.kura.driver.descriptor.DriverDescriptorService") == null
+                    && this.driverServiceAvailable.compareAndSet(true, false)) {
+                driverChanged = true;
+            }
+        }
+
+        if (wiresChanged || driverChanged) {
+            scheduleServletReinit();
+        }
+    }
+
+    /**
+     * Debounced re-registration of servlets when feature services change.
+     * Multiple rapid service events are coalesced into a single reinit.
+     */
+    private void scheduleServletReinit() {
+        logger.info("Feature service availability changed, scheduling servlet re-registration");
+
+        ScheduledFuture<?> pending = this.pendingReinit.get();
+        if (pending != null) {
+            pending.cancel(false);
+        }
+
+        ScheduledFuture<?> future = this.serviceChangeExecutor.schedule(() -> {
+            try {
+                logger.info("Re-initializing servlets with updated feature detection");
+                unregisterAll();
+                doUpdate(getConsoleOptions());
+            } catch (Exception e) {
+                logger.warn("Failed to re-initialize servlets after service change", e);
+            }
+        }, 2, TimeUnit.SECONDS);
+
+        this.pendingReinit.set(future);
     }
 
     public String setAuthenticated(final HttpSession session, final String user, final AuditContext context) {
