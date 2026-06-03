@@ -21,6 +21,7 @@ import org.eclipse.kura.web.server.RequiredPermissions;
 import org.eclipse.kura.web.shared.GwtKuraException;
 import org.eclipse.kura.web.shared.KuraPermission;
 import org.eclipse.kura.web.shared.model.GwtConfigComponent;
+import org.eclipse.kura.web.shared.model.GwtScriptValidationResult;
 import org.eclipse.kura.web.shared.model.GwtXSRFToken;
 
 import com.google.gwt.user.client.rpc.RemoteService;
@@ -196,4 +197,21 @@ public interface GwtComponentService extends RemoteService {
             throws GwtKuraException;
 
     public Map<String, String> findFactoryComponentPidNames(GwtXSRFToken xsrfToken) throws GwtKuraException;
+
+    /**
+     * Compiles (without executing) the given script and returns any syntax / compilation errors so that an interactive
+     * code editor can surface them to the user before the configuration is saved.
+     *
+     * @param xsrfToken
+     *            the cross site request forgery token.
+     * @param language
+     *            the script language id (for example {@code js}, {@code groovy}, {@code python}, {@code wasm}).
+     * @param script
+     *            the script source to validate.
+     * @return the validation outcome.
+     * @throws GwtKuraException
+     *             if the validation service is not available.
+     */
+    public GwtScriptValidationResult validateScript(GwtXSRFToken xsrfToken, String language, String script)
+            throws GwtKuraException;
 }

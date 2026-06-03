@@ -14,9 +14,11 @@
  *******************************************************************************/
 package org.eclipse.kura.web.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.kura.KuraException;
@@ -24,10 +26,16 @@ import org.eclipse.kura.configuration.ConfigurationService;
 import org.eclipse.kura.configuration.metatype.OCD;
 import org.eclipse.kura.core.configuration.ComponentConfigurationImpl;
 import org.eclipse.kura.locale.LocaleContextHolder;
+import org.eclipse.kura.script.validation.ScriptValidationError;
+import org.eclipse.kura.script.validation.ScriptValidationResult;
+import org.eclipse.kura.script.validation.ScriptValidationService;
 import org.eclipse.kura.web.server.util.GwtComponentServiceInternal;
 import org.eclipse.kura.web.server.util.ServiceLocator;
+import org.eclipse.kura.web.shared.GwtKuraErrorCode;
 import org.eclipse.kura.web.shared.GwtKuraException;
 import org.eclipse.kura.web.shared.model.GwtConfigComponent;
+import org.eclipse.kura.web.shared.model.GwtScriptValidationError;
+import org.eclipse.kura.web.shared.model.GwtScriptValidationResult;
 import org.eclipse.kura.web.shared.model.GwtXSRFToken;
 import org.eclipse.kura.web.shared.service.GwtComponentService;
 
@@ -169,5 +177,55 @@ public class GwtComponentServiceImpl extends OsgiRemoteServiceServlet implements
             OCD ocd = cc.getLocalizedDefinition(LocaleContextHolder.getLocale().getLanguage());
             return ocd.getName();
         }));
+    }
+
+    @Override
+    public GwtScriptValidationResult validateScript(GwtXSRFToken xsrfToken, String language, String script)
+            throws GwtKuraException {
+        this.checkXSRFToken(xsrfToken);
+
+        // Dispatch by language across every registered ScriptValidationService: the generic provider (monorepo
+        // script.provider) handles js/groovy/python/wasm, while sibling-specific providers (e.g. a Camel-DSL
+        // validator in kura-camel) can register their own languages. The UI / editor component stays generic and
+        // knows nothing about who validates what.
+        final String requested = language == null ? "" : language.trim().toLowerCase();
+
+        ScriptValidationResult result = null;
+        for (final ScriptValidationService service : ServiceLocator.getInstance()
+                .getServices(ScriptValidationService.class)) {
+            if (supportsLanguage(service, requested)) {
+                result = service.validate(language, script);
+                break;
+            }
+        }
+
+        if (result == null) {
+            throw new GwtKuraException(GwtKuraErrorCode.SERVICE_NOT_ENABLED);
+        }
+
+        final GwtScriptValidationResult gwtResult = new GwtScriptValidationResult();
+        gwtResult.setValid(result.isValid());
+
+        final List<GwtScriptValidationError> gwtErrors = new ArrayList<>();
+        for (final ScriptValidationError error : result.getErrors()) {
+            gwtErrors.add(new GwtScriptValidationError(error.getLine(), error.getColumn(), error.getMessage(),
+                    error.getSeverity()));
+        }
+        gwtResult.setErrors(gwtErrors);
+
+        return gwtResult;
+    }
+
+    private static boolean supportsLanguage(final ScriptValidationService service, final String language) {
+        final Set<String> supported = service.getSupportedLanguages();
+        if (supported == null) {
+            return false;
+        }
+        for (final String supportedLanguage : supported) {
+            if (supportedLanguage != null && supportedLanguage.equalsIgnoreCase(language)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

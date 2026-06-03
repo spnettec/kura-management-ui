@@ -5,8 +5,13 @@
  *******************************************************************************/
 package org.eclipse.kura.web.client.ui;
 
+import java.util.List;
+
+import org.eclipse.kura.web.shared.model.GwtScriptValidationError;
+
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JavaScriptObject;
+import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.DivElement;
 import com.google.gwt.dom.client.Document;
@@ -41,7 +46,8 @@ import com.google.gwt.dom.client.Style;
  */
 public class CodeEditorTextArea extends ExtendedTextArea {
 
-    private final String mode;
+    private String mode;
+    private String languagePrefix = "";
     private JavaScriptObject editor;
     private DivElement editorDiv;
     private boolean syncingFromEditor;
@@ -96,7 +102,7 @@ public class CodeEditorTextArea extends ExtendedTextArea {
         Scheduler.get().scheduleDeferred(() -> {
             try {
                 final String current = getValue();
-                this.editor = aceInit(this.editorDiv, this.mode, current == null ? "" : current);
+                this.editor = aceInit(this.editorDiv, toAceMode(this.mode), current == null ? "" : current);
             } catch (final Exception e) {
                 GWT.log("Failed to initialize ACE editor", e);
                 // Restore textarea visibility on init failure.
@@ -149,6 +155,111 @@ public class CodeEditorTextArea extends ExtendedTextArea {
         super.setReadOnly(readOnly);
         if (this.editor != null) {
             aceSetReadOnly(this.editor, readOnly);
+        }
+    }
+
+    /**
+     * @return the ACE language mode this editor was created with (e.g. {@code "groovy"}, {@code "js"}). Used as the
+     *         language id when requesting backend script validation.
+     */
+    public String getMode() {
+        return this.mode;
+    }
+
+    /**
+     * Switches the editor's syntax-highlighting language at runtime. Used when the language is driven by another
+     * configuration field (a {@code |Editor:$<param>} / {@code |code} marker) so the highlight — and the language the
+     * "Validate" button sends to the backend — follow the user's current selection.
+     *
+     * @param mode the ACE language id; {@code null}/empty falls back to plain text
+     */
+    public void setMode(final String mode) {
+        this.mode = (mode == null || mode.trim().isEmpty()) ? "text" : mode.trim().toLowerCase();
+        if (this.editor != null) {
+            aceSetMode(this.editor, toAceMode(this.mode));
+        }
+    }
+
+    /**
+     * Sets a literal prefix prepended to the value supplied by {@link #applyLanguageValue(String)}. Used when the
+     * marker is e.g. {@code camel-$file.extension}: the prefix is {@code camel-} so a selected value {@code xml}
+     * becomes the language {@code camel-xml}.
+     */
+    public void setLanguagePrefix(final String languagePrefix) {
+        this.languagePrefix = languagePrefix == null ? "" : languagePrefix;
+    }
+
+    /**
+     * Applies a controlling field's current value as the language, prepending the configured {@link #languagePrefix}.
+     * Called when that field changes so highlight and validation follow the selection.
+     */
+    public void applyLanguageValue(final String value) {
+        setMode(this.languagePrefix + (value == null ? "" : value));
+    }
+
+    /**
+     * Maps a backend/script language id to the matching ACE highlight mode. {@link #getMode()} keeps returning the raw
+     * id (what the validator wants, e.g. {@code js}); only the highlight uses the ACE mode name (e.g. {@code
+     * javascript}, for which the {@code ace/mode/javascript} file exists).
+     */
+    private static String toAceMode(final String language) {
+        if (language == null) {
+            return "text";
+        }
+        switch (language.toLowerCase()) {
+        case "js":
+        case "ecmascript":
+            return "javascript";
+        case "py":
+            return "python";
+        case "camel-java":
+            return "java";
+        case "camel-xml":
+            return "xml";
+        case "camel-yaml":
+            return "yaml";
+        default:
+            return language.toLowerCase();
+        }
+    }
+
+    /**
+     * Shows the given validation errors as inline gutter annotations on the matching lines. No-op when ACE failed to
+     * load (plain-textarea fallback).
+     *
+     * @param errors
+     *            the problems to annotate; backend line/column numbers are 1-based, ACE expects 0-based
+     */
+    public void setAnnotations(final List<GwtScriptValidationError> errors) {
+        if (this.editor == null) {
+            return;
+        }
+        final JsArray<JavaScriptObject> annotations = JavaScriptObject.createArray().cast();
+        for (final GwtScriptValidationError error : errors) {
+            final int row = error.getLine() > 0 ? error.getLine() - 1 : 0;
+            final int column = error.getColumn() > 0 ? error.getColumn() - 1 : 0;
+            final String severity = error.getSeverity() == null ? "error" : error.getSeverity();
+            annotations.push(makeAnnotation(row, column, error.getMessage(), severity));
+        }
+        aceSetAnnotations(this.editor, annotations);
+    }
+
+    /**
+     * @return the live editor content. Reads straight from ACE when it is active, so validation sees the latest
+     *         keystrokes even if the hidden backing textarea mirror lagged; falls back to the textarea value when ACE
+     *         never loaded (plain-textarea fallback).
+     */
+    public String getEditorValue() {
+        if (this.editor != null) {
+            return aceGetValue(this.editor);
+        }
+        return getValue();
+    }
+
+    /** Clears any inline gutter annotations previously set by {@link #setAnnotations(List)}. */
+    public void clearAnnotations() {
+        if (this.editor != null) {
+            aceClearAnnotations(this.editor);
         }
     }
 
@@ -217,5 +328,21 @@ public class CodeEditorTextArea extends ExtendedTextArea {
 
     private static native void aceDestroy(JavaScriptObject editor) /*-{
         editor.destroy();
+    }-*/;
+
+    private static native JavaScriptObject makeAnnotation(int row, int column, String text, String type) /*-{
+        return { row: row, column: column, text: text, type: type };
+    }-*/;
+
+    private static native void aceSetAnnotations(JavaScriptObject editor, JavaScriptObject annotations) /*-{
+        editor.getSession().setAnnotations(annotations);
+    }-*/;
+
+    private static native void aceClearAnnotations(JavaScriptObject editor) /*-{
+        editor.getSession().clearAnnotations();
+    }-*/;
+
+    private static native void aceSetMode(JavaScriptObject editor, String mode) /*-{
+        editor.getSession().setMode("ace/mode/" + mode);
     }-*/;
 }

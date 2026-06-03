@@ -58,6 +58,7 @@
             <b:Panel>
                 <b:ButtonGroup size="SMALL">
                     <b:Button ui:field="apply" addStyleNames="fa fa-check"></b:Button>
+                    <b:Button ui:field="applyAndWatch" addStyleNames="fa fa-file-text-o"></b:Button>
                     <b:Button ui:field="reset" addStyleNames="fa fa-times"></b:Button>
                 </b:ButtonGroup>
                 <b:ButtonGroup size="SMALL" addStyleNames="pull-right">

@@ -92,6 +92,8 @@ public class ServicesUi extends AbstractServicesUi {
     @UiField
     Button apply;
     @UiField
+    Button applyAndWatch;
+    @UiField
     Button reset;
     @UiField
     Button delete;
@@ -123,6 +125,10 @@ public class ServicesUi extends AbstractServicesUi {
     private final Optional<Listener> listener;
     private Optional<Consumer<Optional<Throwable>>> onApply = Optional.empty();
 
+    // Opened after a confirmed Apply to scroll the gateway log "from this moment", so the effect of the change
+    // (including any runtime error the just-applied component logs) is visible in-page.
+    private final LogWatchModal logWatchModal = new LogWatchModal();
+
     //
     // Public methods
     //
@@ -139,7 +145,10 @@ public class ServicesUi extends AbstractServicesUi {
         this.serviceDescription.setText(addedItem.getComponentDescription());
 
         this.apply.setText(MSGS.apply());
-        this.apply.addClickHandler(event -> apply());
+        this.apply.addClickHandler(event -> apply(false));
+
+        this.applyAndWatch.setText(MSGS.applyAndWatchLogs());
+        this.applyAndWatch.addClickHandler(event -> apply(true));
 
         this.reset.setText(MSGS.reset());
         this.reset.addClickHandler(event -> reset());
@@ -158,6 +167,7 @@ public class ServicesUi extends AbstractServicesUi {
 
         setDirty(false);
         this.apply.setEnabled(false);
+        this.applyAndWatch.setEnabled(false);
         this.reset.setEnabled(false);
         this.delete.setEnabled(this.configurableComponent.isFactoryComponent());
     }
@@ -173,9 +183,12 @@ public class ServicesUi extends AbstractServicesUi {
     @Override
     public void setDirty(boolean flag) {
         this.dirty = flag;
-        if (this.dirty && this.initialized) {
-            this.apply.setEnabled(true);
-            this.reset.setEnabled(true);
+        if (this.initialized) {
+            // Drive the buttons both ways: previously only the dirty->enable path existed, so reverting a change back
+            // to its original value left Apply enabled but inert (apply() is a no-op when not dirty).
+            this.apply.setEnabled(this.dirty);
+            this.applyAndWatch.setEnabled(this.dirty);
+            this.reset.setEnabled(this.dirty);
         }
     }
 
@@ -217,6 +230,7 @@ public class ServicesUi extends AbstractServicesUi {
                 restoreConfiguration(ServicesUi.this.originalConfig);
                 renderForm();
                 ServicesUi.this.apply.setEnabled(false);
+                ServicesUi.this.applyAndWatch.setEnabled(false);
                 ServicesUi.this.reset.setEnabled(false);
                 setDirty(false);
                 logger.info(MSGS.info() + ": " + "Refetching services");
@@ -242,6 +256,7 @@ public class ServicesUi extends AbstractServicesUi {
         restoreConfiguration(this.originalConfig);
         renderForm();
         this.apply.setEnabled(false);
+        this.applyAndWatch.setEnabled(false);
         this.reset.setEnabled(false);
         setDirty(false);
     }
@@ -331,7 +346,7 @@ public class ServicesUi extends AbstractServicesUi {
     //
     // Private methods
     //
-    private void apply() {
+    private void apply(final boolean watchLogs) {
         if (isValid()) {
             if (isDirty()) {
                 this.configurableComponent = getUpdatedConfiguration();
@@ -355,6 +370,9 @@ public class ServicesUi extends AbstractServicesUi {
                         MSGS.deviceConfigConfirmation(this.configurableComponent.getComponentName()),
                         AlertDialog.Severity.INFO, ok -> {
                             if (ok) {
+                                if (watchLogs) {
+                                    ServicesUi.this.logWatchModal.showFromNow();
+                                }
                                 RequestQueue.submit(context -> ServicesUi.this.gwtXSRFService.generateSecurityToken(
                                         context.callback(token -> ServicesUi.this.backend.updateComponentConfiguration(
                                                 token, ServicesUi.this.configurableComponent,
@@ -376,9 +394,16 @@ public class ServicesUi extends AbstractServicesUi {
                                                     public void onSuccess(Void result) {
                                                         logger.info(MSGS.info() + ": " + MSGS.deviceConfigApplied());
                                                         ServicesUi.this.apply.setEnabled(false);
+                                                        ServicesUi.this.applyAndWatch.setEnabled(false);
                                                         ServicesUi.this.reset.setEnabled(false);
                                                         setDirty(false);
                                                         ServicesUi.this.originalConfig = ServicesUi.this.configurableComponent;
+                                                        // Rebaseline the form to the just-applied values: each field's
+                                                        // "original value" is captured at render time, so without this
+                                                        // a revert back to a pre-apply value would read as not-dirty
+                                                        // and could not be re-applied.
+                                                        ServicesUi.this.restoreConfiguration(ServicesUi.this.originalConfig);
+                                                        ServicesUi.this.renderForm();
                                                         context.defer(2000, () -> ServicesUi.this.listener
                                                                 .ifPresent(Listener::onConfigurationChanged));
                                                         ServicesUi.this.onApply

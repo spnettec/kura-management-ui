@@ -14,11 +14,14 @@
 package org.eclipse.kura.web.client.ui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.eclipse.kura.web.client.messages.Messages;
@@ -29,11 +32,14 @@ import org.eclipse.kura.web.shared.model.GwtCloudEntry;
 import org.eclipse.kura.web.shared.model.GwtConfigComponent;
 import org.eclipse.kura.web.shared.model.GwtConfigParameter;
 import org.eclipse.kura.web.shared.model.GwtConfigParameter.GwtConfigParameterType;
+import org.eclipse.kura.web.shared.model.GwtScriptValidationError;
+import org.eclipse.kura.web.shared.model.GwtScriptValidationResult;
 import org.eclipse.kura.web.shared.service.GwtComponentService;
 import org.eclipse.kura.web.shared.service.GwtComponentServiceAsync;
 import org.eclipse.kura.web.shared.service.GwtSecurityTokenService;
 import org.eclipse.kura.web.shared.service.GwtSecurityTokenServiceAsync;
 import org.gwtbootstrap3.client.ui.Anchor;
+import org.gwtbootstrap3.client.ui.Button;
 import org.gwtbootstrap3.client.ui.DropDown;
 import org.gwtbootstrap3.client.ui.DropDownHeader;
 import org.gwtbootstrap3.client.ui.DropDownMenu;
@@ -48,6 +54,8 @@ import com.google.gwt.user.client.ui.Panel;
 import org.gwtbootstrap3.client.ui.TextArea;
 import org.gwtbootstrap3.client.ui.TextBox;
 import org.gwtbootstrap3.client.ui.base.TextBoxBase;
+import org.gwtbootstrap3.client.ui.constants.ButtonSize;
+import org.gwtbootstrap3.client.ui.constants.ButtonType;
 import org.gwtbootstrap3.client.ui.constants.IconType;
 import org.gwtbootstrap3.client.ui.constants.Toggle;
 import org.gwtbootstrap3.client.ui.constants.ValidationState;
@@ -81,6 +89,13 @@ public abstract class AbstractServicesUi extends Composite {
     protected GwtConfigComponent configurableComponent;
 
     protected HashMap<String, Boolean> valid = new HashMap<>();
+
+    // Code editors whose language follows another parameter's value (|Editor:$<param> or |code), keyed by the id of
+    // that controlling parameter; updated live when the controlling field changes.
+    private final Map<String, List<CodeEditorTextArea>> dynamicLangEditors = new HashMap<>();
+
+    // Conventional ids of a "script language" field that a bare |code marker follows, in priority order.
+    private static final String[] CONVENTIONAL_LANGUAGE_PARAMS = { "language", "scriptEngineName", "lang" };
 
     public abstract void setDirty(boolean flag);
 
@@ -219,6 +234,10 @@ public abstract class AbstractServicesUi extends Composite {
 
         formGroup.add(textBox);
 
+        if (textBox instanceof CodeEditorTextArea) {
+            addScriptValidationControls((CodeEditorTextArea) textBox, formGroup);
+        }
+
         textBox.addValidator(new Validator() {
 
             @Override
@@ -241,6 +260,7 @@ public abstract class AbstractServicesUi extends Composite {
             } else {
                 setDirty(true);
             }
+            updateDynamicEditors(param.getId(), event.getValue());
         });
 
         if (param.getId().endsWith(TARGET_SUFFIX)) {
@@ -301,6 +321,85 @@ public abstract class AbstractServicesUi extends Composite {
         return component.getComponentId();
     }
 
+    /** ACE editor modes the backend {@code ScriptValidationService} is able to compile-check. */
+    private static final Set<String> VALIDATABLE_EDITOR_MODES = new HashSet<>(
+            Arrays.asList("js", "javascript", "ecmascript", "groovy", "python", "py", "wasm", "camel-java", "camel-xml",
+                    "camel-yaml"));
+
+    /**
+     * Adds a "Validate" button (and a status line) under a code editor whose language the backend can compile-check.
+     * Clicking it sends the current script to the {@code ScriptValidationService} and shows any syntax / compilation
+     * errors inline (gutter annotations) and as text, so the author doesn't have to dig through the gateway logs.
+     */
+    private void addScriptValidationControls(final CodeEditorTextArea editor, final FormGroup formGroup) {
+        // The button is always added: the editor language may change at runtime (|Editor:$<param> / |code), so whether
+        // it can be compile-checked is re-evaluated on each click rather than fixed at render time.
+        final Button validateButton = new Button();
+        validateButton.setText(MSGS.scriptValidateButton());
+        validateButton.setType(ButtonType.DEFAULT);
+        validateButton.setSize(ButtonSize.SMALL);
+        validateButton.addStyleName("kura-code-editor-validate");
+
+        final HelpBlock status = new HelpBlock();
+        status.addStyleName("kura-code-editor-validate-status");
+
+        validateButton.addClickHandler(event -> {
+            final String language = editor.getMode();
+            if (language == null || !VALIDATABLE_EDITOR_MODES.contains(language.toLowerCase())) {
+                editor.clearAnnotations();
+                status.setText(MSGS.scriptValidateUnsupported());
+                status.getElement().getStyle().setColor("#8a6d3b");
+                return;
+            }
+            final String script = editor.getEditorValue();
+            if (script == null || script.trim().isEmpty()) {
+                editor.clearAnnotations();
+                status.setText(MSGS.scriptValidateEmpty());
+                status.getElement().getStyle().setColor("#8a6d3b");
+                return;
+            }
+            status.setText(MSGS.scriptValidateInProgress());
+            status.getElement().getStyle().clearColor();
+            RequestQueue.submit(context -> this.gwtXSRFService.generateSecurityToken(
+                    context.callback(token -> AbstractServicesUi.this.gwtComponentService.validateScript(token, language,
+                            script, context.callback(result -> showScriptValidationResult(editor, status, result))))));
+        });
+
+        formGroup.add(validateButton);
+        formGroup.add(status);
+    }
+
+    private void showScriptValidationResult(final CodeEditorTextArea editor, final HelpBlock status,
+            final GwtScriptValidationResult result) {
+        if (result.isValid()) {
+            editor.clearAnnotations();
+            status.setText(MSGS.scriptValidateOk());
+            status.getElement().getStyle().setColor("#3c763d");
+            return;
+        }
+
+        editor.setAnnotations(result.getErrors());
+
+        boolean hasError = false;
+        final StringBuilder sb = new StringBuilder();
+        for (final GwtScriptValidationError error : result.getErrors()) {
+            if (!"warning".equalsIgnoreCase(error.getSeverity())) {
+                hasError = true;
+            }
+            if (sb.length() > 0) {
+                sb.append('\n');
+            }
+            if (error.getLine() > 0) {
+                sb.append(MSGS.scriptValidateErrorAtLine(String.valueOf(error.getLine()), error.getMessage()));
+            } else {
+                sb.append(error.getMessage());
+            }
+        }
+        status.setText(sb.toString());
+        // red for real compile errors, amber when the only thing reported is a "validator unavailable" warning
+        status.getElement().getStyle().setColor(hasError ? "#a94442" : "#8a6d3b");
+    }
+
     private KuraAnchorListItem createListItem(final KuraTextBox textBox, String targetEntryKey, String targetEntryName,
             String targetData) {
         String textDisplay = (targetEntryName == null ? targetEntryKey : targetEntryName) + "(" + targetEntryKey + ")";
@@ -325,12 +424,18 @@ public abstract class AbstractServicesUi extends Composite {
         if (param.getId().endsWith(TARGET_SUFFIX)) {
             return new KuraTextBox();
         }
-        final String editorMode = getEditorMode(param);
-        if (editorMode != null) {
-            // Description marker |Editor:<lang> swaps the textarea for an ACE
-            // code editor. Falls back to a plain textarea internally if
-            // window.ace failed to load.
-            return new CodeEditorTextArea(editorMode);
+        final EditorSpec editorSpec = getEditorSpec(param);
+        if (editorSpec != null) {
+            // Markers |Editor:<lang> / |Editor:$<param>[:default] / |code[:default] swap the textarea for an ACE
+            // code editor (falls back to a plain textarea internally if window.ace failed to load). When the language
+            // is driven by another field, register the editor so it follows that field's value live.
+            final CodeEditorTextArea editor = new CodeEditorTextArea(resolveEditorMode(editorSpec));
+            if (editorSpec.controllingParamId != null) {
+                editor.setLanguagePrefix(editorSpec.prefix);
+                this.dynamicLangEditors.computeIfAbsent(editorSpec.controllingParamId, k -> new ArrayList<>())
+                        .add(editor);
+            }
+            return editor;
         }
         if (param.getDescription() != null && param.getDescription().contains("\u200B\u200B\u200B\u200B\u200B")) {
             final ExtendedTextArea result = createTextArea();
@@ -344,15 +449,36 @@ public abstract class AbstractServicesUi extends Composite {
     }
 
     /**
-     * Returns the editor language id when a parameter's description ends with
-     * {@code |Editor:<lang>} (e.g. {@code |Editor:java}, {@code |Editor:groovy},
-     * {@code |Editor:xml}, {@code |Editor:yaml}). Returns {@code null} otherwise.
-     *
-     * <p>Recognized lang ids correspond to ACE mode files shipped under
-     * {@code www/ace/mode-*.js}. Unknown ids are passed through verbatim \u2014 ACE
-     * will silently fall back to plain text if the mode file is missing.
+     * How a code-editor field gets its language: an optional literal {@code prefix} prepended to a controlling
+     * parameter's value (or to the default). E.g. {@code camel-$file.extension} → prefix {@code camel-}, controlling
+     * {@code file.extension}, so a selected value {@code xml} becomes the language {@code camel-xml}.
      */
-    private static String getEditorMode(final GwtConfigParameter param) {
+    private static final class EditorSpec {
+        private final String prefix;
+        private final String controllingParamId;
+        private final String defaultLang;
+
+        EditorSpec(final String prefix, final String controllingParamId, final String defaultLang) {
+            this.prefix = prefix == null ? "" : prefix;
+            this.controllingParamId = controllingParamId;
+            this.defaultLang = defaultLang;
+        }
+    }
+
+    /**
+     * Parses a parameter's description marker into an {@link EditorSpec}, or {@code null} when the field is not a code
+     * editor. Supported markers (after the trailing {@code |}):
+     * <ul>
+     * <li>{@code Editor:<lang>} \u2014 fixed language (e.g. {@code Editor:groovy}).</li>
+     * <li>{@code Editor:$<paramId>} \u2014 language taken live from sibling parameter {@code <paramId>}.</li>
+     * <li>{@code Editor:$<paramId>:<defaultLang>} \u2014 same, with a default used when that parameter is empty.</li>
+     * <li>{@code code} / {@code code:<defaultLang>} \u2014 follows the first present conventional language field
+     * ({@link #CONVENTIONAL_LANGUAGE_PARAMS}), with an optional default.</li>
+     * <li>{@code Editor:<prefix>$<paramId>[:<defaultLang>]} \u2014 a literal prefix may precede {@code $}; it is prepended
+     * to the resolved value (e.g. {@code camel-$file.extension} \u2192 {@code camel-xml}).</li>
+     * </ul>
+     */
+    private EditorSpec getEditorSpec(final GwtConfigParameter param) {
         if (param == null || param.getType() != GwtConfigParameterType.STRING) {
             return null;
         }
@@ -365,12 +491,91 @@ public abstract class AbstractServicesUi extends Composite {
             return null;
         }
         final String marker = result[1].trim();
-        final String prefix = "Editor:";
-        if (!marker.regionMatches(true, 0, prefix, 0, prefix.length())) {
+
+        // |code  or  |code:<defaultLang>
+        if (marker.regionMatches(true, 0, "code", 0, 4) && (marker.length() == 4 || marker.charAt(4) == ':')) {
+            final String def = marker.length() > 5 ? emptyToNull(marker.substring(5).trim()) : null;
+            return new EditorSpec("", firstPresentLanguageParam(), def);
+        }
+
+        // |Editor:...
+        final String editorPrefix = "Editor:";
+        if (!marker.regionMatches(true, 0, editorPrefix, 0, editorPrefix.length())) {
             return null;
         }
-        final String mode = marker.substring(prefix.length()).trim().toLowerCase();
-        return mode.isEmpty() ? null : mode;
+        final String body = marker.substring(editorPrefix.length()).trim();
+        if (body.isEmpty()) {
+            return null;
+        }
+        final int dollar = body.indexOf('$');
+        if (dollar >= 0) {
+            final String literalPrefix = body.substring(0, dollar);
+            final String rest = body.substring(dollar + 1).trim();
+            final int colon = rest.indexOf(':');
+            if (colon >= 0) {
+                return new EditorSpec(literalPrefix, emptyToNull(rest.substring(0, colon).trim()),
+                        emptyToNull(rest.substring(colon + 1).trim()));
+            }
+            return new EditorSpec(literalPrefix, emptyToNull(rest), null);
+        }
+        // fixed language
+        return new EditorSpec("", null, body);
+    }
+
+    /** Resolves the initial ACE mode for a spec: prefix + (controlling field's current value, else default), else text. */
+    private String resolveEditorMode(final EditorSpec spec) {
+        String base = null;
+        if (spec.controllingParamId != null) {
+            final String value = currentParamValue(spec.controllingParamId);
+            if (value != null && !value.isEmpty()) {
+                base = value;
+            }
+        }
+        if (base == null) {
+            base = spec.defaultLang;
+        }
+        if (base == null || base.isEmpty()) {
+            return "text";
+        }
+        return (spec.prefix + base).toLowerCase();
+    }
+
+    private String firstPresentLanguageParam() {
+        if (this.configurableComponent == null) {
+            return null;
+        }
+        for (final String candidate : CONVENTIONAL_LANGUAGE_PARAMS) {
+            if (this.configurableComponent.getParameter(candidate) != null) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private String currentParamValue(final String paramId) {
+        if (this.configurableComponent == null) {
+            return null;
+        }
+        final GwtConfigParameter p = this.configurableComponent.getParameter(paramId);
+        if (p == null) {
+            return null;
+        }
+        return p.getValue() != null ? p.getValue() : p.getDefault();
+    }
+
+    /** Pushes a new language onto every code editor whose marker follows the given controlling parameter. */
+    private void updateDynamicEditors(final String controllingParamId, final String language) {
+        final List<CodeEditorTextArea> editors = this.dynamicLangEditors.get(controllingParamId);
+        if (editors == null) {
+            return;
+        }
+        for (final CodeEditorTextArea editor : editors) {
+            editor.applyLanguageValue(language);
+        }
+    }
+
+    private static String emptyToNull(final String value) {
+        return value == null || value.isEmpty() ? null : value;
     }
 
     private boolean isTextArea(final GwtConfigParameter param) {
@@ -614,6 +819,7 @@ public abstract class AbstractServicesUi extends Composite {
             ListBox box = (ListBox) event.getSource();
             param.setValue(box.getSelectedValue());
             setDirty(true);
+            updateDynamicEditors(param.getId(), box.getSelectedValue());
         });
 
         formGroup.add(listBox);
