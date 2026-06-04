@@ -13,6 +13,7 @@ import org.gwtbootstrap3.client.ui.Modal;
 import org.gwtbootstrap3.client.ui.ModalBody;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.StyleInjector;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
@@ -32,20 +33,41 @@ public class LogWatchModal {
     private static final int TAIL_LINES = 1000;
     private static final int MAX_DISPLAY_LINES = 3000;
 
+    private static final String MODAL_STYLE = "kura-log-watch-modal";
+    private static final String SCROLL_STYLE = "kura-log-watch-scroll";
+    private static boolean cssInjected = false;
+
+    // Make the popup user-resizable: drag the bottom-right corner of the modal box to change width AND height; the
+    // log area flexes to fill it. Injected once.
+    private static void injectResizableModalCss() {
+        if (cssInjected) {
+            return;
+        }
+        cssInjected = true;
+        StyleInjector.inject("." + MODAL_STYLE + " .modal-dialog{width:70%;max-width:96vw;}"
+                + "." + MODAL_STYLE + " .modal-content{resize:both;overflow:auto;display:flex;flex-direction:column;"
+                + "height:60vh;min-width:420px;min-height:260px;max-width:96vw;max-height:92vh;}"
+                + "." + MODAL_STYLE + " .modal-body{flex:1 1 auto;min-height:0;display:flex;padding:8px;}"
+                + "." + SCROLL_STYLE + "{flex:1 1 auto;min-height:0;width:100%;}");
+    }
+
     private final Modal modal = new Modal();
     private final FlowPanel logPanel = new FlowPanel();
     private final ScrollPanel scrollPanel = new ScrollPanel(this.logPanel);
     private final LogFileFollower follower = new LogFileFollower();
 
     public LogWatchModal() {
+        injectResizableModalCss();
+
         this.modal.setTitle(MSGS.logWatchTitle());
         this.modal.setClosable(true);
+        this.modal.addStyleName(MODAL_STYLE);
 
-        this.scrollPanel.setHeight("440px");
-        this.scrollPanel.setWidth("100%");
+        this.scrollPanel.addStyleName(SCROLL_STYLE);
         this.scrollPanel.getElement().getStyle().setProperty("backgroundColor", "#1e1e1e");
         this.scrollPanel.getElement().getStyle().setProperty("padding", "8px");
         this.scrollPanel.getElement().getStyle().setProperty("borderRadius", "3px");
+        this.scrollPanel.getElement().getStyle().setProperty("overflow", "auto");
 
         this.logPanel.getElement().getStyle().setProperty("fontFamily", "monospace");
         this.logPanel.getElement().getStyle().setProperty("fontSize", "12px");
