@@ -16,6 +16,7 @@ package org.eclipse.kura.web.server.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.kura.web.shared.GwtKuraErrorCode;
 import org.eclipse.kura.web.shared.GwtKuraException;
@@ -77,6 +78,20 @@ public class ServiceLocator {
             service = getService(sr);
         }
         return service;
+    }
+
+    /**
+     * Silent presence-aware lookup for OPTIONAL services (typically siblings that may not be installed): returns empty
+     * without logging when the service is absent, unlike {@link #getService(Class)} which warns. Use this for feature
+     * probes (show/hide UI); keep {@link #getService(Class)} where the feature is actually being used, so a missing
+     * service of an installed feature still warns.
+     */
+    public <T> Optional<T> getServiceOptional(Class<T> serviceClass) {
+        final ServiceReference<T> sr = this.bundleContext.getServiceReference(serviceClass);
+        if (sr == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(this.bundleContext.getService(sr));
     }
 
     public interface ServiceFunction<T, R> {

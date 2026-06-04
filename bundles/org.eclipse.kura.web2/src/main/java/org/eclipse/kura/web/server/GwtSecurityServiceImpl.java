@@ -115,17 +115,8 @@ public class GwtSecurityServiceImpl extends OsgiRemoteServiceServlet implements 
     }
 
     private boolean isSecurityServiceAvailable() {
-        SecurityService securityService;
-
-        try {
-            securityService = ServiceLocator.getInstance().getService(SecurityService.class);
-            if (securityService == null) {
-                return false;
-            }
-        } catch (GwtKuraException e) {
-            return false;
-        }
-        return true;
+        // optional feature probe: absent (sibling not installed) is normal, do not warn
+        return ServiceLocator.getInstance().getServiceOptional(SecurityService.class).isPresent();
     }
 
     private boolean isTamperDetectionAvailable() {
@@ -137,30 +128,13 @@ public class GwtSecurityServiceImpl extends OsgiRemoteServiceServlet implements 
     }
 
     private boolean isDebugMode() {
-        SecurityService securityService;
-
-        try {
-            securityService = ServiceLocator.getInstance().getService(SecurityService.class);
-            if (securityService != null) {
-                return securityService.isDebugEnabled();
-            }
-        } catch (GwtKuraException e) {
-            // Nothing to do
-        }
-        return false;
+        // optional feature probe: absent is normal, do not warn
+        return ServiceLocator.getInstance().getServiceOptional(SecurityService.class)
+                .map(SecurityService::isDebugEnabled).orElse(false);
     }
 
     private boolean isThreatManagerAvailable() {
-
-        try {
-            ThreatManagerService threatManagerService = ServiceLocator.getInstance()
-                    .getService(ThreatManagerService.class);
-            if (threatManagerService != null) {
-                return true;
-            }
-        } catch (GwtKuraException e) {
-            return false;
-        }
-        return false;
+        // optional feature probe: absent (sibling not installed) is normal, do not warn
+        return ServiceLocator.getInstance().getServiceOptional(ThreatManagerService.class).isPresent();
     }
 }

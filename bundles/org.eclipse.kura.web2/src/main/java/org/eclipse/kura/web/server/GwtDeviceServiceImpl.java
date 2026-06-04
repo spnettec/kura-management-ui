@@ -240,10 +240,8 @@ public class GwtDeviceServiceImpl extends OsgiRemoteServiceServlet implements Gw
     public boolean checkIfContainerOrchestratorIsActive(GwtXSRFToken xsrfToken) throws GwtKuraException {
         checkXSRFToken(xsrfToken);
 
-        ContainerOrchestrationService checkIfContainerOrchestratorIsActive = ServiceLocator.getInstance()
-                .getService(ContainerOrchestrationService.class);
-
-        return checkIfContainerOrchestratorIsActive != null;
+        // optional feature probe: absent (kura-container not installed) is normal, do not warn
+        return ServiceLocator.getInstance().getServiceOptional(ContainerOrchestrationService.class).isPresent();
     }
 
     @Override
