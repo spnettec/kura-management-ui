@@ -774,19 +774,19 @@ class UploadRequest extends JakartaServletFileUpload<DiskFileItem, DiskFileItemF
 
     public UploadRequest(DiskFileItemFactory diskFileItemFactory) {
         super(diskFileItemFactory);
-        setSizeMax(FileServlet.getFileUploadSizeMax());
+        setMaxSize(FileServlet.getFileUploadSizeMax());
         // contrary to what the name says, this method does not set the number of
         // allowed files but the number of parts
         // (files and fields)
-        setFileCountMax(20L);
+        setMaxFileCount(20L);
         this.formFields = new HashMap<>();
         this.fileItems = new ArrayList<>();
     }
 
     public void parse(HttpServletRequest req) throws FileUploadException, UnsupportedEncodingException {
 
-        logger.debug("upload.getFileSizeMax(): {}", getFileSizeMax());
-        logger.debug("upload.getSizeMax(): {}", getSizeMax());
+        logger.debug("upload.getMaxFileSize(): {}", getMaxFileSize());
+        logger.debug("upload.getMaxSize(): {}", getMaxSize());
 
         // Parse the request
         List<DiskFileItem> items = null;
