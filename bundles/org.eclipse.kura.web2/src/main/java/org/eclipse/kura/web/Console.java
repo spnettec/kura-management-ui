@@ -582,6 +582,7 @@ public class Console implements SelfConfiguringComponent {
     private synchronized void initResourcesAndServlets() {
 
         final GwtSupportedFeatures supportedFeatures = GwtFeatureUtil.getSupportedFeatures();
+        logger.info("Supported WEB UI features: {}", supportedFeatures);
 
         this.eventService = new GwtEventServiceImpl();
         this.wiresBlinkService = new WiresBlinkServlet();

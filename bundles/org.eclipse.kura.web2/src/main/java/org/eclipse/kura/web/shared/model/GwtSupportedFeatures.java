@@ -13,6 +13,8 @@
 package org.eclipse.kura.web.shared.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GwtSupportedFeatures extends GwtBaseModel implements Serializable {
 
@@ -54,5 +56,24 @@ public class GwtSupportedFeatures extends GwtBaseModel implements Serializable {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public String toString() {
+        final List<String> availableFeatures = new ArrayList<>();
+
+        if (this.isAssetAvailable()) {
+            availableFeatures.add("assets");
+        }
+
+        if (this.areWiresServicesAvailable()) {
+            availableFeatures.add("wires");
+        }
+
+        if (this.areDriverServicesAvailable()) {
+            availableFeatures.add("drivers");
+        }
+
+        return this.getClass().getSimpleName() + " " + availableFeatures.toString();
     }
 }
