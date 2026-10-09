@@ -401,7 +401,7 @@ public final class GwtServerUtil {
             gwtParam.setType(GwtConfigParameterType.valueOf(ad.getType().name()));
             gwtParam.setRequired(ad.isRequired());
             gwtParam.setCardinality(ad.getCardinality());
-            gwtParam.setDefault(ad.getDefault());
+            gwtParam.setDefault(getDefaultValue(ad));
             if (ad.getOption() != null && !ad.getOption().isEmpty()) {
                 Map<String, String> options = new HashMap<>();
                 for (Option option : ad.getOption()) {
@@ -448,6 +448,28 @@ public final class GwtServerUtil {
         return gwtParams;
     }
 
+    static String getDefaultValue(final AD ad) {
+        final String rawDefault = ad.getDefault();
+
+        if (rawDefault == null) {
+            return null;
+        }
+
+        final String[] values = StringUtil.splitValues(rawDefault);
+
+        if (values.length == 0) {
+            return rawDefault;
+        }
+
+        final int cardinality = ad.getCardinality();
+
+        if (cardinality == 0 || cardinality == 1 || cardinality == -1) {
+            return values[0];
+        }
+
+        return Arrays.stream(values).map(value -> value.replace(",", "\\,")).collect(Collectors.joining(","));
+    }
+
     public static GwtConfigParameter toGwtConfigParameter(final AD ad, final Object value) {
         GwtConfigParameter gwtParam = new GwtConfigParameter();
         gwtParam.setId(ad.getId());
@@ -456,7 +478,7 @@ public final class GwtServerUtil {
         gwtParam.setType(GwtConfigParameterType.valueOf(ad.getType().name()));
         gwtParam.setRequired(ad.isRequired());
         gwtParam.setCardinality(ad.getCardinality());
-        gwtParam.setDefault(ad.getDefault());
+        gwtParam.setDefault(getDefaultValue(ad));
         if (ad.getOption() != null && !ad.getOption().isEmpty()) {
             Map<String, String> options = new HashMap<>();
             for (Option option : ad.getOption()) {
