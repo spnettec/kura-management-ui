@@ -18,13 +18,16 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -152,11 +155,12 @@ public class LogServlet extends AuditServlet {
 
     private byte[] zipFiles(List<File> files) throws IOException {
         byte[] bytes = new byte[2048];
+        Set<String> usedEntryNames = new HashSet<>();
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ZipOutputStream zos = new ZipOutputStream(baos);) {
             for (File file : files) {
-                zipFile(bytes, zos, file);
+                zipFile(bytes, zos, file, usedEntryNames);
             }
             zos.flush();
             zos.close();
@@ -166,18 +170,39 @@ public class LogServlet extends AuditServlet {
 
     }
 
-    private void zipFile(byte[] bytes, ZipOutputStream zos, File file) throws IOException {
+    private void zipFile(byte[] bytes, ZipOutputStream zos, File file, Set<String> usedEntryNames) throws IOException {
         try (FileInputStream fis = new FileInputStream(file.getCanonicalPath());
                 BufferedInputStream bis = new BufferedInputStream(fis);) {
 
-            zos.putNextEntry(new ZipEntry(file.getName()));
+            zos.putNextEntry(new ZipEntry(uniqueEntryName(usedEntryNames, file.getName())));
 
             int bytesRead;
             while ((bytesRead = bis.read(bytes)) != -1) {
                 zos.write(bytes, 0, bytesRead);
             }
             zos.closeEntry();
+        } catch (FileNotFoundException e) {
+            // Log rotation can remove a file between directory listing and opening it.
+            logger.warn("Skipping unavailable log file {}", file, e);
         }
+    }
+
+    private String uniqueEntryName(Set<String> usedEntryNames, String fileName) {
+        if (usedEntryNames.add(fileName)) {
+            return fileName;
+        }
+
+        int dotIndex = fileName.lastIndexOf('.');
+        String baseName = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+        String extension = dotIndex > 0 ? fileName.substring(dotIndex) : "";
+
+        int suffix = 1;
+        String candidate;
+        do {
+            candidate = baseName + "_" + suffix + extension;
+            suffix++;
+        } while (!usedEntryNames.add(candidate));
+        return candidate;
     }
 
     private boolean writeJournalLog(PrivilegedExecutorService pes, String outputFields, String outputFile) {
