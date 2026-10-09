@@ -389,13 +389,12 @@ public class NetworkConfigurationServicePropertiesBuilder {
             this.properties.setModemUsername(this.ifname, gwtModemConfig.getUsername());
 
             if (gwtModemConfig.getPassword() != null) {
-                if (GwtServerUtil.PASSWORD_PLACEHOLDER.equals(gwtModemConfig.getPassword())
-                        && this.oldGwtNetInterfaceConfig instanceof GwtModemInterfaceConfig) {
-
-                    GwtModemInterfaceConfig gwtModemInterfaceConfig = (GwtModemInterfaceConfig) this.oldGwtNetInterfaceConfig;
-                    gwtModemInterfaceConfig.setUnescaped(true);
-
-                    this.properties.setModemPassword(this.ifname, gwtModemInterfaceConfig.getPassword());
+                if (GwtServerUtil.PASSWORD_PLACEHOLDER.equals(gwtModemConfig.getPassword())) {
+                    if (this.oldGwtNetInterfaceConfig instanceof GwtModemInterfaceConfig) {
+                        GwtModemInterfaceConfig gwtModemInterfaceConfig = (GwtModemInterfaceConfig) this.oldGwtNetInterfaceConfig;
+                        gwtModemInterfaceConfig.setUnescaped(true);
+                        this.properties.setModemPassword(this.ifname, gwtModemInterfaceConfig.getPassword());
+                    }
                 } else {
                     this.properties.setModemPassword(this.ifname, gwtModemConfig.getPassword());
                 }
