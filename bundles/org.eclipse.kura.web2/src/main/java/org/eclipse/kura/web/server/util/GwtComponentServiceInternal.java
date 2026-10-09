@@ -172,7 +172,9 @@ public class GwtComponentServiceInternal {
             } else {
                 objValue = GwtServerUtil.getUserDefinedObject(gwtConfigParam, currentValue);
             }
-            properties.put(gwtConfigParam.getId(), objValue);
+            if (!GwtServerUtil.isUnsetPasswordPlaceholder(gwtConfigParam, objValue)) {
+                properties.put(gwtConfigParam.getId(), objValue);
+            }
         }
 
         // Force kura.service.pid into properties, if originally present

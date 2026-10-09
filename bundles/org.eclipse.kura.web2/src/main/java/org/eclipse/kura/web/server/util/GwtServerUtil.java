@@ -270,24 +270,19 @@ public final class GwtServerUtil {
         }
     }
 
+    static boolean isUnsetPasswordPlaceholder(GwtConfigParameter param, Object value) {
+        return value == null && param.getType() == GwtConfigParameterType.PASSWORD
+                && PASSWORD_PLACEHOLDER.equals(param.getValue());
+    }
+
     private static Object getUserDefinedObjectScalar(GwtConfigParameter param, Object currentObjValue) {
         String strValue = param.getValue();
 
         if (param.getType() == GwtConfigParameterType.PASSWORD && PASSWORD_PLACEHOLDER.equals(strValue)) {
 
-            if (currentObjValue instanceof Password) {
-                return currentObjValue;
-            }
-
-            if (param.isRequired()) {
-                final String defaultValue = param.getDefault();
-
-                if (defaultValue != null && !defaultValue.trim().isEmpty()) {
-                    final GwtConfigParameter cloned = new GwtConfigParameter(param);
-                    cloned.setValue(defaultValue);
-                    return getObjectValue(cloned);
-                }
-            }
+            // An unchanged field without a stored password must stay unset. The
+            // configuration service owns default handling; the placeholder is not a value.
+            return currentObjValue instanceof Password ? currentObjValue : null;
         }
 
         return getObjectValue(param);
@@ -362,14 +357,20 @@ public final class GwtServerUtil {
         final ComponentConfiguration backupCC = currentCC;
         if (backupCC == null) {
             for (final GwtConfigParameter gwtConfigParam : config.getParameters()) {
-                properties.put(gwtConfigParam.getId(), getUserDefinedObject(gwtConfigParam, null));
+                final Object value = getUserDefinedObject(gwtConfigParam, null);
+                if (!isUnsetPasswordPlaceholder(gwtConfigParam, value)) {
+                    properties.put(gwtConfigParam.getId(), value);
+                }
             }
         } else {
             final Map<String, Object> backupConfigProp = backupCC.getConfigurationProperties();
             for (final GwtConfigParameter gwtConfigParam : config.getParameters()) {
                 final Map<String, Object> currentConfigProp = currentCC.getConfigurationProperties();
-                properties.put(gwtConfigParam.getId(),
-                        getUserDefinedObject(gwtConfigParam, currentConfigProp.get(gwtConfigParam.getName())));
+                final Object value = getUserDefinedObject(gwtConfigParam,
+                        currentConfigProp.get(gwtConfigParam.getName()));
+                if (!isUnsetPasswordPlaceholder(gwtConfigParam, value)) {
+                    properties.put(gwtConfigParam.getId(), value);
+                }
             }
 
             // Force kura.service.pid into properties, if originally present
@@ -627,7 +628,9 @@ public final class GwtServerUtil {
             } else {
                 objValue = GwtServerUtil.getUserDefinedObject(gwtConfigParam, currentValue);
             }
-            properties.put(gwtConfigParam.getId(), objValue);
+            if (!isUnsetPasswordPlaceholder(gwtConfigParam, objValue)) {
+                properties.put(gwtConfigParam.getId(), objValue);
+            }
         }
 
         // Force kura.service.pid into properties, if originally present
