@@ -355,13 +355,13 @@ public class NetworkTabsUi extends Composite {
         removeTab(this.dhcp4NatTabAnchorItem);
 
         this.modemTabAnchorItem.setEnabled(!interfaceNotEnabled);
-        this.modemAntennaTabAnchorItem.setEnabled(isModemLTE());
+        // The network technology reported by the NetworkManager based backend is the one currently in use, so the
+        // tab (which only shows the modem status) is always displayed
+        this.modemAntennaTabAnchorItem.setEnabled(true);
 
         insertTab(this.modemTabAnchorItem);
         insertTab(this.modemGpsTabAnchorItem);
-        if (isModemLTE()) {
-            insertTab(this.modemAntennaTabAnchorItem);
-        }
+        insertTab(this.modemAntennaTabAnchorItem);
     }
 
     private void showEthernetTabs() {
@@ -369,15 +369,6 @@ public class NetworkTabsUi extends Composite {
         removeTab(this.modemTabAnchorItem);
         removeTab(this.modemGpsTabAnchorItem);
         removeTab(this.modemAntennaTabAnchorItem);
-    }
-
-    private boolean isModemLTE() {
-        for (String techType : ((GwtModemInterfaceConfig) this.netIfConfig).getNetworkTechnology()) {
-            if ("LTE".equals(techType)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void removeOptionalTabs() {

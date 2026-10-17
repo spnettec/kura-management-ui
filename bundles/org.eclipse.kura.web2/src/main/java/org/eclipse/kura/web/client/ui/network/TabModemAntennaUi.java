@@ -19,6 +19,7 @@ import org.eclipse.kura.web.shared.model.GwtNetInterfaceConfig;
 import org.eclipse.kura.web.shared.model.GwtSession;
 import org.gwtbootstrap3.client.ui.FieldSet;
 import org.gwtbootstrap3.client.ui.FormControlStatic;
+import org.gwtbootstrap3.client.ui.FormGroup;
 import org.gwtbootstrap3.client.ui.FormLabel;
 import org.gwtbootstrap3.client.ui.InlineRadio;
 import org.gwtbootstrap3.client.ui.PanelHeader;
@@ -102,10 +103,16 @@ public class TabModemAntennaUi extends Composite implements NetworkTab {
     @UiField
     HelpButton antennaHelp;
 
+    @UiField
+    FormGroup antennaGroup;
+
     public TabModemAntennaUi(GwtSession currentSession, NetworkTabsUi tabs) {
         initWidget(uiBinder.createAndBindUi(this));
         this.tabs = tabs;
         initForm();
+
+        // the NetworkManager based backend does not apply the diversity antenna setting
+        this.antennaGroup.setVisible(false);
 
         this.antennaHelp.setHelpText(MSGS.netModemToolTipAntenna());
         this.labelRegistration.setText(MSGS.netHwRegistration());
@@ -148,12 +155,8 @@ public class TabModemAntennaUi extends Composite implements NetworkTab {
     @Override
     public void getUpdatedNetInterface(GwtNetInterfaceConfig updatedNetIf) {
         GwtModemInterfaceConfig updatedModemNetIf = (GwtModemInterfaceConfig) updatedNetIf;
-        if (this.formInitialized) {
-            updatedModemNetIf.setDiversityEnabled(this.radio1.getValue());
-        } else {
-            // initForm hasn't been called yet
-            updatedModemNetIf.setDiversityEnabled(this.selectedModemIfConfig.isDiversityEnabled());
-        }
+        // the diversity setting is hidden: keep the stored value
+        updatedModemNetIf.setDiversityEnabled(this.selectedModemIfConfig.isDiversityEnabled());
     }
 
     @Override
