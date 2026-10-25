@@ -11,43 +11,31 @@
     SPDX-License-Identifier: EPL-2.0
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <!--
         Self-contained addon distrib pom — no parent. Builds the kura-management-ui addon
         .deb using the web2 bundle jar already in ~/.m2 (built by the kura monorepo
         reactor). Run with:
             mvn -f kura-management-ui/distrib/pom.xml clean install
     -->
-
     <groupId>org.eclipse.kura</groupId>
     <artifactId>kura-management-ui-distrib</artifactId>
     <version>3.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>kura-management-ui-distrib</name>
-
     <properties>
         <jdeb-version>1.14</jdeb-version>
-
         <addon.installation.dir>/opt/eclipse/kura/siblings/management-ui</addon.installation.dir>
         <console.files.installation.dir>/opt/eclipse/kura/console</console.files.installation.dir>
-
         <web2.jar.name>org.eclipse.kura.web2</web2.jar.name>
         <web2.version>3.0.0-SNAPSHOT</web2.version>
-
         <!-- Sibling-only support libs (previously shipped via monorepo kura-core.deb). -->
         <commons-csv.version>1.14.0</commons-csv.version>
-
         <!-- pure-Java GWT artifact: no native bits, deb is arch-neutral -->
         <deb.architecture>all</deb.architecture>
-
         <package.name>kura-management-ui</package.name>
     </properties>
-
     <!-- Declared so the Maven reactor orders distrib AFTER the web2 bundle.
          Without it, a parallel build (`mvn -T 1C`) can run this module's
          copy-resources before web2 has finished packaging, and the deb gets
@@ -64,10 +52,8 @@
             <version>${commons-csv.version}</version>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
-
             <!-- strip "-SNAPSHOT" from project.version -> ${release.version} -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -83,13 +69,12 @@
                             <name>release.version</name>
                             <value>${project.version}</value>
                             <regex>-SNAPSHOT</regex>
-                            <replacement></replacement>
+                            <replacement />
                             <failIfNoMatch>false</failIfNoMatch>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
             <!-- short git commit -> ${git.commit.id.abbrev} -->
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>
@@ -112,7 +97,6 @@
                     </includeOnlyProperties>
                 </configuration>
             </plugin>
-
             <!-- Stage the web2 JAR from ~/.m2 (Tycho installed it there in the
                  previous reactor step) into a known location so jdeb can pick
                  it up. Resolving via maven-dependency-plugin guarantees we
@@ -151,7 +135,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <!-- Assemble the addon .deb. Output: kura-management-ui_VER-REV_all.deb -->
             <plugin>
                 <groupId>org.vafer</groupId>
@@ -195,7 +178,6 @@
                                         <filemode>600</filemode>
                                     </mapper>
                                 </data>
-
                                 <data>
                                     <src>${basedir}/extra/console</src>
                                     <type>directory</type>
@@ -238,7 +220,6 @@
             </plugin>
         </plugins>
     </build>
-
     <profiles>
         <!-- Internal profile: active if -DreleaseBuild is *not* specified. -->
         <profile>
@@ -269,3 +250,4 @@
         </profile>
     </profiles>
 </project>
+

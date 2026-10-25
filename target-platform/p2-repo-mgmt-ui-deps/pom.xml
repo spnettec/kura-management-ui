@@ -9,22 +9,16 @@
 
     SPDX-License-Identifier: EPL-2.0
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.eclipse.kura</groupId>
         <artifactId>kura-management-ui-target-platform</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>p2-repo-mgmt-ui-deps</artifactId>
     <packaging>pom</packaging>
     <name>P2 site for kura-management-ui-specific deps</name>
-
     <build>
         <plugins>
             <plugin>
@@ -39,14 +33,11 @@
                             <goal>site</goal>
                         </goals>
                         <configuration>
-                            <artifacts>
-                                
-                            </artifacts>
+                            <artifacts />
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
@@ -60,9 +51,7 @@
                         </goals>
                         <configuration>
                             <target>
-                                <exec executable="${project.basedir}/../install-to-m2.sh"
-                                      dir="${project.basedir}"
-                                      failonerror="true">
+                                <exec executable="${project.basedir}/../install-to-m2.sh" dir="${project.basedir}" failonerror="true">
                                     <arg value="${project.build.directory}/repository/plugins" />
                                     <arg value="p2.osgi.bundle" />
                                 </exec>
@@ -73,7 +62,6 @@
             </plugin>
         </plugins>
     </build>
-
     <repositories>
         <repository>
             <id>central</id>
@@ -81,3 +69,4 @@
         </repository>
     </repositories>
 </project>
+
